@@ -1,105 +1,39 @@
-import { google } from 'googleapis';
-import { PortfolioData } from '@/types/portfolio';
+import { supabase } from './supabase';
+import { PortfolioData, AllocationHolding, Account, PositionDetail, MonthlyData, MonthlyAccountDetail } from '@/types/portfolio';
 import YahooFinance from 'yahoo-finance2';
+
 const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
 
+function formatCurrency(val: number): string {
+  return Math.round(val).toLocaleString('ko-KR');
+}
+
+function formatPercent(val: number): string {
+  return (val * 100).toFixed(2) + '%';
+}
+
+function inferCurrency(ticker: string): 'KRW' | 'USD' {
+  if (ticker === 'KRW' || ticker.endsWith('.KS') || ticker.endsWith('.KQ') || ticker.includes('KRW')) return 'KRW';
+  return 'USD';
+}
+
 export async function getPortfolioData(): Promise<PortfolioData> {
-  const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-  const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n');
-  const spreadsheetId = process.env.GOOGLE_SHEETS_ID;
-
-  if (!clientEmail || !privateKey || !spreadsheetId) {
-    throw new Error('Google Sheets 환경 변수가 설정되지 않았습니다.');
-  }
-
-  const auth = new google.auth.GoogleAuth({
-    credentials: {
-      client_email: clientEmail,
-      private_key: privateKey,
-    },
-    scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
-  });
-
-  const sheets = google.sheets({ version: 'v4', auth });
-  
-  // 1. Fetch values for portfolio and allocations, and get grid data for monthly history to retrieve notes
-  const [batchResponse, monthlySheetResponse] = await Promise.all([
-    sheets.spreadsheets.values.batchGet({
-      spreadsheetId,
-      ranges: ['포트폴리오!A1:Z50', '자산배분현황!A1:U200'],
-    }),
-    sheets.spreadsheets.get({
-      spreadsheetId,
-      ranges: ['월별평가액!A1:BL150'],
-      includeGridData: true,
-    })
+  // 1. Fetch data from Supabase
+  const [
+    { data: accountsData, error: accountsErr },
+    { data: holdingsData, error: holdingsErr },
+    { data: monthlyData, error: monthlyErr }
+  ] = await Promise.all([
+    supabase.from('accounts').select('*').order('id', { ascending: true }),
+    supabase.from('holdings').select('*, accounts(name)'),
+    supabase.from('monthly_valuations').select('*, accounts(name)').order('month', { ascending: true })
   ]);
 
-  const portfolioRows = batchResponse.data.valueRanges?.[0]?.values || [];
-  const allocationRows = batchResponse.data.valueRanges?.[1]?.values || [];
+  if (accountsErr) throw new Error(accountsErr.message);
+  if (holdingsErr) throw new Error(holdingsErr.message);
+  if (monthlyErr) throw new Error(monthlyErr.message);
 
-  // Parse monthly sheet response into rows and notes
-  const monthlySheet = monthlySheetResponse.data.sheets?.[0];
-  const gridData = monthlySheet?.data?.[0];
-  const rowData = gridData?.rowData || [];
-
-  const monthlyRows: string[][] = [];
-  const monthlyNotes: string[][] = [];
-
-  for (let r = 0; r < rowData.length; r++) {
-    const row = rowData[r];
-    const valRow: string[] = [];
-    const noteRow: string[] = [];
-
-    const cells = row.values || [];
-    for (let c = 0; c < cells.length; c++) {
-      const cell = cells[c];
-      valRow.push(cell.formattedValue || '');
-      noteRow.push(cell.note || '');
-    }
-    monthlyRows.push(valRow);
-    monthlyNotes.push(noteRow);
-  }
-
-  if (portfolioRows.length === 0) {
-    throw new Error('데이터가 없습니다.');
-  }
-
-  // 1. 총합 요약 (Row 11, index 10)
-  const summaryRow = portfolioRows[10] || [];
-  const summary = {
-    principal: summaryRow[3] || '0',
-    current: summaryRow[5] || '0',
-    currentUsd: summaryRow[6] || '0',
-    profit: summaryRow[7] || '0',
-    returnRate: summaryRow[8] || '0',
-    highWaterMark: summaryRow[9] || '0',
-    drawdown: summaryRow[10] || '0%',
-    highWaterMarkDate: summaryRow[11] || '',
-    underwater: summaryRow[12] || '0',
-  };
-
-  // 2. 계좌별 요약 (Row 3~10, index 2~9)
-  const accounts = [];
-  
-  for (let i = 2; i <= 9; i++) {
-    const row = portfolioRows[i];
-    if (!row) continue;
-
-    if (row[0] && row[0].trim() !== '') {
-      accounts.push({
-        name: row[0],
-        principal: row[3] || '0',
-        allocationRatio: row[4] || '0',
-        current: row[5] || '0',
-        currentUsd: row[6] || '0',
-        profit: row[7] || '0',
-        returnRate: row[8] || '0',
-      });
-    }
-  }
-
-  // Fetch Market Indices using Yahoo Finance
+  // 2. Fetch Exchange Rate and Market Indices
   const targetIndices = [
     { symbol: '^IXIC', name: 'NASDAQ' },
     { symbol: '^GSPC', name: 'S&P 500' },
@@ -118,10 +52,8 @@ export async function getPortfolioData(): Promise<PortfolioData> {
         yahooFinance.quote(target.symbol),
         yahooFinance.chart(target.symbol, { period1: oneYearAgo, interval: '1wk' })
       ]);
-
       const changePercent = quote.regularMarketChangePercent || 0;
       const changeStr = (changePercent > 0 ? '+' : '') + changePercent.toFixed(2) + '%';
-      
       return {
         name: target.name,
         ticker: target.symbol,
@@ -133,214 +65,243 @@ export async function getPortfolioData(): Promise<PortfolioData> {
         })) : []
       };
     } catch (err) {
-      console.error(`Error fetching data for ${target.symbol}:`, err);
-      return {
-        name: target.name,
-        ticker: target.symbol,
-        current: 'N/A',
-        change: 'N/A',
-        history: []
-      };
+      return { name: target.name, ticker: target.symbol, current: 'N/A', change: 'N/A', history: [] };
     }
   }));
 
-  // 3. 종목별 상세 현황 (Row 14~, index 13~)
-  const details = [];
-  for (let i = 13; i < portfolioRows.length; i++) {
-    const row = portfolioRows[i];
-    if (!row || !row[0] || row[0] === '') continue;
+  const usdKrwRate = Number(indices.find(i => i.ticker === 'KRW=X')?.current?.replace(/,/g, '') || 1400);
 
-    details.push({
-      category: row[0],
-      name: row[1] || row[2],
-      strategy: row[2] || '', 
-      investedKrw: row[3] || '0',
-      investedUsd: row[4] || '0',
-      current: row[5] || '0',
-      currentUsd: row[6] || '0',
-      profit: row[7] || '0',
-      returnRate: row[8] || '0',
-      country: row[13] || '',
-      overallWeight: row[17] || '0',
-    });
-  }
-
-  // 4. 자산배분현황 파싱
-  const allocations: Record<string, any[]> = {};
-  let currentAccountId = "";
-
-  for (let i = 0; i < allocationRows.length; i++) {
-    const row = allocationRows[i];
-    if (!row) continue;
-
-    // Detect Account Header
-    if (row[1] && row[1] !== "자산" && row[1] !== "평가손익" && !row[6]) {
-       currentAccountId = row[1];
-       if (!allocations[currentAccountId]) {
-         allocations[currentAccountId] = [];
-       }
-       continue;
-    }
-
-    // Detect Holding
-    if (currentAccountId && row[6] && row[6] !== "현재가") {
-       allocations[currentAccountId].push({
-         rowIndex: i + 1, // Store the 1-indexed row number of this holding
-         accountId: currentAccountId,
-         subAccount: row[1] || '',
-         strategy: row[3] || '',
-         name: row[4] || row[3] || '',
-         ticker: row[5] || '',
-         currentPrice: row[6] || '',
-         unitPrice: row[8] || '',
-         quantity: row[9] || '',
-         investedValue: row[10] || '',
-         currentValue: row[11] || '',
-         currentValueKrw: row[12] || '',
-         profitRate: row[13] || '',
-         weight: row[14] || '',
-       });
-    }
-  }
-
-  // 5. 월별평가액 파싱
-  const monthlyHistory = [];
-  const accountNames = ['현금', '현주주식', '동민주식', '동민연금', '현주연금', '동민코인', '기타'];
-  
-  let cumulativePrincipal = 0;
-  let cumulativeProfit = 0;
-
-  for (let i = 2; i < monthlyRows.length; i++) {
-    const row = monthlyRows[i];
-    if (!row || !row[0] || row[0].trim() === '') continue;
-
-    // 계좌별 적립액(Column B~H / index 1~7)이 입력되지 않은 평가월은 제외합니다.
-    const hasDeposits = Array.from({ length: 7 }, (_, idx) => row[1 + idx]).some(val => val !== undefined && val.trim() !== '');
-    if (!hasDeposits) continue;
-
-    const parseCurrency = (val: string) => {
-      if (!val) return 0;
-      return Number(val.replace(/[^0-9.-]+/g, ''));
-    };
-    
-    const parsePercent = (val: string) => {
-      if (!val) return 0;
-      return Number(val.replace(/[^0-9.-]+/g, ''));
-    };
-
-    const monthStr = row[0].trim();
-    const valuation = parseCurrency(row[16]);
-    const monthlyDeposit = parseCurrency(row[8]);
-    const monthlyProfit = parseCurrency(row[25]);
-    
-    const profitRate = row[33] ? parsePercent(row[33]) : 0;
-    const twr = row[49] ? parsePercent(row[49]) : 0;
-    const ytd = row[57] ? parsePercent(row[57]) : 0;
-    
-    cumulativePrincipal += monthlyDeposit;
-    cumulativeProfit += monthlyProfit;
-
-    const cumulativeReturnRate = cumulativePrincipal > 0 ? (cumulativeProfit / cumulativePrincipal) * 100 : 0;
-
-    const details = accountNames.map((name, idx) => ({
-      name,
-      deposit: parseCurrency(row[1 + idx]),
-      valuation: parseCurrency(row[9 + idx]),
-      profit: parseCurrency(row[18 + idx]),
-      profitRate: (row[26 + idx] && row[26 + idx].trim() !== '') ? parsePercent(row[26 + idx]) : 0,
-      cumulativeProfit: (row[34 + idx] && row[34 + idx].trim() !== '') ? parseCurrency(row[34 + idx]) : 0,
-      twr: (row[42 + idx] && row[42 + idx].trim() !== '') ? parsePercent(row[42 + idx]) : 0,
-      ytd: (row[50 + idx] && row[50 + idx].trim() !== '') ? parsePercent(row[50 + idx]) : 0,
-      note: monthlyNotes[i]?.[1 + idx] || '',
-    }));
-
-    monthlyHistory.push({
-      rowIndex: i + 1,
-      month: monthStr,
-      monthlyDeposit,
-      cumulativePrincipal,
-      valuation,
-      monthlyProfit,
-      cumulativeProfit,
-      profitRate,
-      cumulativeReturnRate,
-      twr,
-      ytd,
-      details,
-    });
-  }
-
-  // 6. 각 종목별 1년 역사적 차트 데이터 페칭 및 바인딩
+  // 3. Process Holdings and get Live Prices
   const formatYahooTicker = (ticker: string): string => {
     let t = ticker.trim().toUpperCase();
-    if (!t) return "";
-
-    // 1. 한국 주식/ETF (6자리 숫자형) -> .KS (KOSPI) 접미사 부여
-    if (/^\d{6}$/.test(t)) {
-      return `${t}.KS`;
-    }
-
-    // 2. KRW 마켓 가상자산 (예: BTCKRW -> BTC-KRW)
-    if (/^(BTC|ETH|SOL|XRP|DOGE|ADA)KRW$/.test(t)) {
-      return t.replace(/^(BTC|ETH|SOL|XRP|DOGE|ADA)KRW$/, "$1-KRW");
-    }
-
-    // 3. 주요 스태이블코인 및 기축 통화 가상자산
+    if (!t || t === 'KRW' || t === 'USD' || t === 'UNKNOWN') return "";
+    if (/^\d{6}$/.test(t)) return `${t}.KS`;
+    if (/^(BTC|ETH|SOL|XRP|DOGE|ADA)KRW$/.test(t)) return t.replace(/^(BTC|ETH|SOL|XRP|DOGE|ADA)KRW$/, "$1-KRW");
     if (t === "USDT") return "USDT-USD";
     if (t === "USDC") return "USDC-USD";
     if (t === "BTC") return "BTC-USD";
     if (t === "ETH") return "ETH-USD";
-
-    // 4. 미국 클래스 주식 (예: BRK.B -> BRK-B)
     return t.replace(/\./g, "-");
   };
 
-  const tickers = new Set<string>();
-  const rawToFormattedTicker: Record<string, string> = {};
-
-  Object.values(allocations).forEach(holdingList => {
-    holdingList.forEach(h => {
-      if (h.ticker && h.ticker !== "USD" && h.ticker !== "KRW" && !h.ticker.includes("원") && !h.ticker.includes("현금")) {
-        const cleanTicker = h.ticker.replace(/=HYPERLINK\(.*,"(.*)"\)/, "$1").trim();
-        if (cleanTicker) {
-          const formatted = formatYahooTicker(cleanTicker);
-          if (formatted) {
-            tickers.add(formatted);
-            rawToFormattedTicker[cleanTicker] = formatted;
-          }
-        }
-      }
-    });
+  const tickersToFetch = new Set<string>();
+  holdingsData.forEach((h: any) => {
+    const formatted = formatYahooTicker(h.ticker);
+    if (formatted) tickersToFetch.add(formatted);
   });
 
-  const tickerCharts: Record<string, any[]> = {};
-  await Promise.all(Array.from(tickers).map(async (ticker) => {
+  const priceMap: Record<string, number> = {};
+  const chartMap: Record<string, any[]> = {};
+
+  await Promise.all(Array.from(tickersToFetch).map(async (ticker) => {
     try {
-      const chart = await yahooFinance.chart(ticker, { period1: oneYearAgo, interval: '1wk' });
+      const [quote, chart] = await Promise.all([
+        yahooFinance.quote(ticker),
+        yahooFinance.chart(ticker, { period1: oneYearAgo, interval: '1wk' })
+      ]);
+      priceMap[ticker] = quote.regularMarketPrice || 0;
       if (chart.quotes) {
-        tickerCharts[ticker] = chart.quotes
-          .filter(q => q.close !== null)
-          .map(q => ({
-            date: q.date.toISOString(),
-            value: q.close as number
-          }));
+        chartMap[ticker] = chart.quotes.filter(q => q.close !== null).map(q => ({
+          date: q.date.toISOString(),
+          value: q.close as number
+        }));
       }
     } catch (err) {
-      console.error(`Error fetching chart for ticker ${ticker}:`, err);
+      console.error(`Error fetching ticker ${ticker}`);
     }
   }));
 
-  Object.keys(allocations).forEach(accountId => {
-    allocations[accountId] = allocations[accountId].map(h => {
-      if (!h.ticker) return { ...h, history: [] };
-      const cleanTicker = h.ticker.replace(/=HYPERLINK\(.*,"(.*)"\)/, "$1").trim();
-      const formatted = rawToFormattedTicker[cleanTicker] || cleanTicker;
-      return {
-        ...h,
-        history: tickerCharts[formatted] || []
-      };
+  // 4. Calculate Allocations & Account Summaries
+  const allocations: Record<string, AllocationHolding[]> = {};
+  const accountSummaries: Record<string, any> = {};
+  let totalPrincipal = 0;
+  let totalCurrentValue = 0;
+  let totalCurrentUsd = 0;
+
+  accountsData.forEach((acc: any) => {
+    allocations[acc.name] = [];
+    accountSummaries[acc.name] = {
+      name: acc.name,
+      principal: 0,
+      current: 0,
+      currentUsd: 0,
+    };
+  });
+
+  const positionDetails: PositionDetail[] = [];
+
+  holdingsData.forEach((h: any, index: number) => {
+    const accName = h.accounts?.name || '기타';
+    const currency = inferCurrency(h.ticker);
+    const formattedTicker = formatYahooTicker(h.ticker);
+    
+    let currentPrice = priceMap[formattedTicker] || h.unit_price;
+    if (h.ticker === 'KRW') currentPrice = 1;
+    if (h.ticker === 'USD') currentPrice = usdKrwRate;
+
+    const quantity = Number(h.quantity);
+    const unitPrice = Number(h.unit_price);
+    
+    const investedValueOrig = quantity * unitPrice;
+    const currentValueOrig = quantity * currentPrice;
+
+    // Convert to KRW
+    const investedValueKrw = currency === 'USD' ? investedValueOrig * usdKrwRate : investedValueOrig;
+    const currentValueKrw = currency === 'USD' ? currentValueOrig * usdKrwRate : currentValueOrig;
+    
+    // Profit and Rates
+    const profitKrw = currentValueKrw - investedValueKrw;
+    const profitRate = investedValueKrw > 0 ? profitKrw / investedValueKrw : 0;
+
+    const holding: AllocationHolding = {
+      rowIndex: index,
+      accountId: accName,
+      subAccount: h.strategy || '',
+      name: h.name,
+      strategy: h.strategy || '',
+      ticker: h.ticker,
+      currentPrice: currentPrice.toLocaleString('en-US', { maximumFractionDigits: 2 }),
+      unitPrice: unitPrice.toLocaleString('en-US', { maximumFractionDigits: 2 }),
+      quantity: quantity.toString(),
+      investedValue: formatCurrency(investedValueKrw),
+      currentValue: formatCurrency(currentValueOrig),
+      currentValueKrw: formatCurrency(currentValueKrw),
+      profitRate: formatPercent(profitRate),
+      weight: '0%', // will calculate later
+      history: chartMap[formattedTicker] || []
+    };
+
+    if (!allocations[accName]) allocations[accName] = [];
+    allocations[accName].push(holding);
+
+    positionDetails.push({
+      category: accName,
+      name: h.name,
+      strategy: h.strategy || '',
+      investedKrw: formatCurrency(investedValueKrw),
+      investedUsd: currency === 'USD' ? formatCurrency(investedValueOrig) : '0',
+      current: formatCurrency(currentValueKrw),
+      currentUsd: currency === 'USD' ? formatCurrency(currentValueOrig) : '0',
+      profit: formatCurrency(profitKrw),
+      returnRate: formatPercent(profitRate),
+      country: currency === 'USD' ? '미국' : '한국',
+      overallWeight: '0%'
+    });
+
+    if (accountSummaries[accName]) {
+      accountSummaries[accName].principal += investedValueKrw;
+      accountSummaries[accName].current += currentValueKrw;
+      if (currency === 'USD') accountSummaries[accName].currentUsd += currentValueOrig;
+    }
+
+    totalPrincipal += investedValueKrw;
+    totalCurrentValue += currentValueKrw;
+    totalCurrentUsd += (currency === 'USD' ? currentValueOrig : currentValueKrw / usdKrwRate);
+  });
+
+  // Calculate weights
+  positionDetails.forEach(p => {
+    const val = Number(p.current.replace(/,/g, ''));
+    p.overallWeight = totalCurrentValue > 0 ? formatPercent(val / totalCurrentValue) : '0%';
+  });
+  
+  Object.keys(allocations).forEach(acc => {
+    const accTotal = accountSummaries[acc].current;
+    allocations[acc].forEach(h => {
+      const val = Number(h.currentValueKrw.replace(/,/g, ''));
+      h.weight = accTotal > 0 ? formatPercent(val / accTotal) : '0%';
     });
   });
 
-  return { summary, accounts, indices, details, allocations, monthlyHistory };
+  const accounts: Account[] = Object.values(accountSummaries).filter(a => a.current > 0).map(a => {
+    const profit = a.current - a.principal;
+    const returnRate = a.principal > 0 ? profit / a.principal : 0;
+    return {
+      name: a.name,
+      principal: formatCurrency(a.principal),
+      allocationRatio: totalCurrentValue > 0 ? formatPercent(a.current / totalCurrentValue) : '0%',
+      current: formatCurrency(a.current),
+      currentUsd: formatCurrency(a.currentUsd),
+      profit: formatCurrency(profit),
+      returnRate: formatPercent(returnRate)
+    };
+  });
+
+  const totalProfit = totalCurrentValue - totalPrincipal;
+  const totalReturnRate = totalPrincipal > 0 ? totalProfit / totalPrincipal : 0;
+
+  const summary = {
+    principal: formatCurrency(totalPrincipal),
+    current: formatCurrency(totalCurrentValue),
+    currentUsd: formatCurrency(totalCurrentUsd),
+    profit: formatCurrency(totalProfit),
+    returnRate: formatPercent(totalReturnRate),
+    highWaterMark: '0',
+    drawdown: '0%',
+    highWaterMarkDate: '',
+    underwater: '0'
+  };
+
+  // 5. Calculate Monthly History
+  const monthlyMap: Record<string, any> = {};
+  let globalCumulativePrincipal = 0;
+  let globalCumulativeProfit = 0;
+
+  monthlyData.forEach((row: any) => {
+    const month = row.month;
+    const accName = row.accounts?.name || '기타';
+    
+    if (!monthlyMap[month]) {
+      monthlyMap[month] = {
+        month,
+        monthlyDeposit: 0,
+        valuation: 0,
+        monthlyProfit: 0,
+        detailsMap: {}
+      };
+    }
+
+    monthlyMap[month].monthlyDeposit += Number(row.deposit);
+    monthlyMap[month].valuation += Number(row.valuation);
+    monthlyMap[month].monthlyProfit += Number(row.profit);
+
+    monthlyMap[month].detailsMap[accName] = {
+      name: accName,
+      deposit: Number(row.deposit),
+      valuation: Number(row.valuation),
+      profit: Number(row.profit),
+      profitRate: Number(row.profit_rate),
+      cumulativeProfit: Number(row.cumulative_profit),
+      twr: Number(row.twr),
+      ytd: Number(row.ytd),
+      note: row.note || ''
+    };
+  });
+
+  const monthlyHistory: MonthlyData[] = Object.values(monthlyMap).sort((a, b) => a.month.localeCompare(b.month)).map((m: any, idx) => {
+    globalCumulativePrincipal += m.monthlyDeposit;
+    globalCumulativeProfit += m.monthlyProfit;
+    const cumulativeReturnRate = globalCumulativePrincipal > 0 ? (globalCumulativeProfit / globalCumulativePrincipal) * 100 : 0;
+
+    const details = accountsData.map((acc: any) => m.detailsMap[acc.name] || {
+      name: acc.name, deposit: 0, valuation: 0, profit: 0, profitRate: 0, cumulativeProfit: 0, twr: 0, ytd: 0, note: ''
+    });
+
+    return {
+      rowIndex: idx + 1,
+      month: m.month,
+      monthlyDeposit: m.monthlyDeposit,
+      cumulativePrincipal: globalCumulativePrincipal,
+      valuation: m.valuation,
+      monthlyProfit: m.monthlyProfit,
+      cumulativeProfit: globalCumulativeProfit,
+      profitRate: 0, 
+      cumulativeReturnRate,
+      twr: 0,
+      ytd: 0,
+      details
+    };
+  });
+
+  return { summary, accounts, indices, details: positionDetails, allocations, monthlyHistory };
 }
