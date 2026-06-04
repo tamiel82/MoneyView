@@ -106,7 +106,7 @@ export async function getPortfolioData(): Promise<PortfolioData> {
     { symbol: '^KS11', name: 'KOSPI' },
     { symbol: '^KQ11', name: 'KOSDAQ' },
     { symbol: 'KRW=X', name: 'USD/KRW 환율' },
-    { symbol: 'DX-Y.NYB', name: '달러 인덱스' }
+    { symbol: 'BTC-USD', name: '비트코인' }
   ];
 
   const oneYearAgo = new Date();
