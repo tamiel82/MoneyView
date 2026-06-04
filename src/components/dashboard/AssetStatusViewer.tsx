@@ -1,5 +1,5 @@
 import { PositionDetail } from "@/types/portfolio";
-import { TrendingUp, TrendingDown, Landmark, Globe, Layers } from "lucide-react";
+import { TrendingUp, TrendingDown, Layers, Globe } from "lucide-react";
 
 export default function AssetStatusViewer({ details }: { details: PositionDetail[] }) {
   if (!details || details.length === 0) return null;
@@ -11,80 +11,90 @@ export default function AssetStatusViewer({ details }: { details: PositionDetail
         자산별 상세 현황
       </h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {details.map((item, index) => {
-          const isPositive = Boolean(item.returnRate && !item.returnRate.includes("-") && item.returnRate !== "0.00%" && item.returnRate !== "0%");
-          const isNegative = Boolean(item.returnRate && item.returnRate.includes("-"));
-          
-          const isUsd = Boolean(item.currentUsd && item.currentUsd !== "0" && item.currentUsd !== "");
+      <div className="glass-card rounded-2xl overflow-hidden border border-white/5">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead className="text-xs uppercase bg-white/5 text-muted-foreground border-b border-white/10">
+              <tr>
+                <th scope="col" className="px-6 py-4 font-semibold">자산 / 전략</th>
+                <th scope="col" className="px-6 py-4 font-semibold">종목명</th>
+                <th scope="col" className="px-6 py-4 font-semibold text-right">투자 원금</th>
+                <th scope="col" className="px-6 py-4 font-semibold text-right">평가액</th>
+                <th scope="col" className="px-6 py-4 font-semibold text-right">손익액</th>
+                <th scope="col" className="px-6 py-4 font-semibold text-right">수익률</th>
+                <th scope="col" className="px-6 py-4 font-semibold text-center">비중</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {details.map((item, index) => {
+                const isPositive = Boolean(item.returnRate && !item.returnRate.includes("-") && item.returnRate !== "0.00%" && item.returnRate !== "0%");
+                const isNegative = Boolean(item.returnRate && item.returnRate.includes("-"));
+                const isUsd = Boolean(item.currentUsd && item.currentUsd !== "0" && item.currentUsd !== "");
 
-          return (
-            <div 
-              key={index} 
-              className="glass-card p-5 rounded-2xl flex flex-col gap-4 border border-white/5 hover:border-white/10 transition-all group"
-            >
-              {/* Header */}
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="text-lg font-bold group-hover:text-primary transition-colors flex items-center gap-2">
-                    {item.name}
-                  </h3>
-                  <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">
-                    <span className="bg-white/10 px-2 py-0.5 rounded-full">{item.category}</span>
-                    <span>{item.strategy}</span>
-                  </p>
-                </div>
-                {item.country && (
-                  <div className="text-xs font-semibold text-muted-foreground bg-white/5 px-2 py-1 rounded flex items-center gap-1">
-                    <Globe className="w-3 h-3" />
-                    {item.country}
-                  </div>
-                )}
-              </div>
-
-              {/* Values */}
-              <div className="grid grid-cols-2 gap-4 mt-2">
-                <div className="flex flex-col gap-1">
-                  <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">평가액</span>
-                  <div className="flex flex-col">
-                    <span className="text-base font-bold text-gradient">{item.current}</span>
-                    {isUsd && <span className="text-xs text-muted-foreground">{item.currentUsd}</span>}
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-1 items-end text-right">
-                  <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">수익률</span>
-                  <div className="flex flex-col items-end">
-                    <div className="flex items-center gap-1">
-                      {isPositive && <TrendingUp className="w-3 h-3 text-red-500" />}
-                      {isNegative && <TrendingDown className="w-3 h-3 text-blue-500" />}
-                      <span className={`text-base font-bold ${isPositive ? "text-red-500" : isNegative ? "text-blue-500" : "text-muted-foreground"}`}>
-                        {item.returnRate}
+                return (
+                  <tr key={index} className="hover:bg-white/5 transition-colors group">
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col gap-1">
+                        <span className="font-medium text-foreground">{item.category}</span>
+                        <span className="text-xs text-muted-foreground">{item.strategy}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-foreground/90">{item.name}</span>
+                        {item.country && (
+                          <span className="text-[10px] bg-white/10 text-muted-foreground px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                            <Globe className="w-2.5 h-2.5" />
+                            {item.country}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex flex-col">
+                        <span className="font-medium text-foreground/80">{item.investedKrw}</span>
+                        {item.investedUsd && item.investedUsd !== "0" && (
+                          <span className="text-xs text-muted-foreground">{item.investedUsd}</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-gradient">{item.current}</span>
+                        {isUsd && (
+                          <span className="text-xs text-muted-foreground">{item.currentUsd}</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <span className={`font-medium ${isPositive ? "text-red-500/90" : isNegative ? "text-blue-500/90" : "text-muted-foreground"}`}>
+                        {isPositive && item.profit !== "0" && !item.profit.includes("+") ? "+" : ""}{item.profit}
                       </span>
-                    </div>
-                    {item.profit && item.profit !== "0" && (
-                      <span className={`text-xs font-medium ${isPositive ? "text-red-500/80" : isNegative ? "text-blue-500/80" : "text-muted-foreground"}`}>
-                        {isPositive && !item.profit.includes("+") ? "+" : ""}{item.profit}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Footer / Meta */}
-              <div className="pt-3 border-t border-white/5 flex justify-between items-center text-xs mt-auto">
-                <div className="text-muted-foreground">
-                  투자원금: <span className="font-semibold text-foreground/80">{item.investedKrw}</span>
-                </div>
-                {item.overallWeight && item.overallWeight !== "0" && item.overallWeight !== "" && (
-                  <div className="text-muted-foreground">
-                    포트 비중: <span className="font-semibold text-foreground/80 text-primary">{item.overallWeight}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        {isPositive && <TrendingUp className="w-3 h-3 text-red-500" />}
+                        {isNegative && <TrendingDown className="w-3 h-3 text-blue-500" />}
+                        <span className={`font-bold ${isPositive ? "text-red-500" : isNegative ? "text-blue-500" : "text-muted-foreground"}`}>
+                          {item.returnRate}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      {item.overallWeight && item.overallWeight !== "0" && item.overallWeight !== "" ? (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
+                          {item.overallWeight}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
