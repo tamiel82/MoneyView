@@ -148,7 +148,7 @@ export async function getPortfolioData(): Promise<PortfolioData> {
   const details = [];
   for (let i = 14; i < portfolioRows.length; i++) {
     const row = portfolioRows[i];
-    if (!row || !row[0] || row[0] === '') continue;
+    if (!row || !row[0] || row[0] === '' || row[0] === '계좌' || row[0].includes('계좌')) continue;
 
     details.push({
       category: row[0],
