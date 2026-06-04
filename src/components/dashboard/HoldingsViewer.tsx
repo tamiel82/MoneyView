@@ -139,6 +139,38 @@ export default function HoldingsViewer({ allocations }: { allocations: Record<st
     }
   };
 
+  const handleDeleteSubmit = async () => {
+    if (!editHolding || !editHolding.rowIndex || isSubmitting) return;
+
+    if (!confirm(`정말 "${editHolding.name}" 종목을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const res = await fetch("/api/portfolio/holding", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          rowIndex: editHolding.rowIndex,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setEditHolding(null);
+        router.refresh();
+      } else {
+        alert(data.error || "삭제에 실패했습니다.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("오류가 발생했습니다.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!addAccountName || isSubmitting) return;
@@ -418,7 +450,16 @@ export default function HoldingsViewer({ allocations }: { allocations: Record<st
                 />
               </div>
 
-              <div className="flex gap-3 pt-4">
+              <div className="flex gap-2 pt-4">
+                <button
+                  type="button"
+                  onClick={handleDeleteSubmit}
+                  disabled={isSubmitting}
+                  className="px-4 py-3 text-sm font-semibold text-red-500 hover:text-white hover:bg-red-500/80 border border-red-500/30 rounded-xl transition-all disabled:opacity-50"
+                  title="종목 삭제"
+                >
+                  삭제
+                </button>
                 <button
                   type="button"
                   onClick={() => setEditHolding(null)}

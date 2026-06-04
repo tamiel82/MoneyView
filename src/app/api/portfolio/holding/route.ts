@@ -138,3 +138,65 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message || '추가 실패' }, { status: 500 });
   }
 }
+
+// DELETE: Remove a holding row
+export async function DELETE(request: Request) {
+  try {
+    const { rowIndex } = await request.json();
+
+    if (!rowIndex) {
+      return NextResponse.json({ error: 'rowIndex is required' }, { status: 400 });
+    }
+
+    const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+    const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+    const spreadsheetId = process.env.GOOGLE_SHEETS_ID;
+
+    if (!clientEmail || !privateKey || !spreadsheetId) {
+      return NextResponse.json({ error: 'Google Sheets 환경 변수가 설정되지 않았습니다.' }, { status: 500 });
+    }
+
+    const auth = new google.auth.GoogleAuth({
+      credentials: {
+        client_email: clientEmail,
+        private_key: privateKey,
+      },
+      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    });
+
+    const sheets = google.sheets({ version: 'v4', auth });
+
+    // 1. Get Sheet ID
+    const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId });
+    const sheet = spreadsheet.data.sheets?.find(s => s.properties?.title === '자산배분현황');
+    const sheetId = sheet?.properties?.sheetId;
+
+    if (sheetId === undefined) {
+      return NextResponse.json({ error: '자산배분현황 시트를 찾을 수 없습니다.' }, { status: 404 });
+    }
+
+    // 2. Delete row
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      requestBody: {
+        requests: [
+          {
+            deleteDimension: {
+              range: {
+                sheetId,
+                dimension: 'ROWS',
+                startIndex: rowIndex - 1, // 0-indexed, inclusive
+                endIndex: rowIndex, // exclusive
+              },
+            },
+          },
+        ],
+      },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error('Holding delete error:', error);
+    return NextResponse.json({ error: error.message || '삭제 실패' }, { status: 500 });
+  }
+}
