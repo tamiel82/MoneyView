@@ -363,15 +363,31 @@ export default function HoldingsViewer({ allocations }: { allocations: Record<st
                                 </div>
                               </div>
 
-                              {/* 5. Profit Rate */}
+                              {/* 5. Profit Rate & Delete */}
                               <div className="col-span-2 flex flex-row md:flex-col justify-between md:justify-center w-full md:items-end z-10">
                                 <span className="md:hidden text-xs text-muted-foreground">수익률:</span>
-                                <div className="flex items-center gap-1">
-                                  {isPositive && <TrendingUp className="w-3 h-3 text-red-500" />}
-                                  {isNegative && <TrendingDown className="w-3 h-3 text-blue-500" />}
-                                  <span className={`text-sm font-semibold ${isPositive ? "text-red-500" : isNegative ? "text-blue-500" : "text-muted-foreground"}`}>
-                                    {detail.profitRate !== "" ? (isPositive && !detail.profitRate.includes("+") ? `+${detail.profitRate}` : detail.profitRate) : "-"}
-                                  </span>
+                                <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-1">
+                                    {isPositive && <TrendingUp className="w-3 h-3 text-red-500" />}
+                                    {isNegative && <TrendingDown className="w-3 h-3 text-blue-500" />}
+                                    <span className={`text-sm font-semibold ${isPositive ? "text-red-500" : isNegative ? "text-blue-500" : "text-muted-foreground"}`}>
+                                      {detail.profitRate !== "" ? (isPositive && !detail.profitRate.includes("+") ? `+${detail.profitRate}` : detail.profitRate) : "-"}
+                                    </span>
+                                  </div>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setEditHolding(detail);
+                                      setTimeout(() => {
+                                        const deleteBtn = document.getElementById("delete-holding-btn");
+                                        if (deleteBtn) deleteBtn.click();
+                                      }, 50);
+                                    }}
+                                    className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100 hidden md:block"
+                                    title="종목 삭제"
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                                  </button>
                                 </div>
                               </div>
 
@@ -453,6 +469,7 @@ export default function HoldingsViewer({ allocations }: { allocations: Record<st
               <div className="flex gap-2 pt-4">
                 <button
                   type="button"
+                  id="delete-holding-btn"
                   onClick={handleDeleteSubmit}
                   disabled={isSubmitting}
                   className="px-4 py-3 text-sm font-semibold text-red-500 hover:text-white hover:bg-red-500/80 border border-red-500/30 rounded-xl transition-all disabled:opacity-50"
