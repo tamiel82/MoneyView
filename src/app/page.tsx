@@ -1,9 +1,7 @@
 import { getPortfolioData } from "@/lib/portfolioService";
 import AssetSummary from "@/components/dashboard/AssetSummary";
-import SummaryCards from "@/components/dashboard/SummaryCards";
 import AccountList from "@/components/dashboard/AccountList";
 import AssetChart from "@/components/dashboard/AssetChart";
-import IndexTicker from "@/components/dashboard/IndexTicker";
 import AssetStatusViewer from "@/components/dashboard/AssetStatusViewer";
 import IndexMonitor from "@/components/dashboard/IndexMonitor";
 import MonthlyChart from "@/components/dashboard/MonthlyChart";
