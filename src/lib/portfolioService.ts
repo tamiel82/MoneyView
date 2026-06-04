@@ -144,9 +144,9 @@ export async function getPortfolioData(): Promise<PortfolioData> {
     }
   }));
 
-  // 3. 종목별 상세 현황 (Row 14~, index 13~)
+  // 3. 종목별 상세 현황 (Row 15~, index 14~)
   const details = [];
-  for (let i = 13; i < portfolioRows.length; i++) {
+  for (let i = 14; i < portfolioRows.length; i++) {
     const row = portfolioRows[i];
     if (!row || !row[0] || row[0] === '') continue;
 
