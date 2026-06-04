@@ -94,7 +94,6 @@ export interface PortfolioData {
   details: PositionDetail[];
   allocations: Record<string, AllocationHolding[]>;
   monthlyHistory: MonthlyData[];
-  assetSummaries: AssetSummary[];
 }
 
 export interface TransactionData {

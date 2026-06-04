@@ -52,14 +52,14 @@ export default async function DashboardPage() {
           <AccountList accounts={accounts} />
         </div>
 
-        {/* 월별 자산 추이 (Full Width) */}
-        <div className="md:col-span-12">
-          <MonthlyChart data={monthlyHistory.filter(h => h.valuation > 0)} />
-        </div>
-
         {/* 자산별 현황 카드 뷰 */}
         <div className="md:col-span-12">
           <AssetStatusViewer details={details} />
+        </div>
+
+        {/* 월별 자산 추이 (Full Width) */}
+        <div className="md:col-span-12">
+          <MonthlyChart data={monthlyHistory.filter(h => h.valuation > 0)} />
         </div>
       </div>
     </div>
