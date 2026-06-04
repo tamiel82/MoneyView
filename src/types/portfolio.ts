@@ -94,6 +94,7 @@ export interface PortfolioData {
   details: PositionDetail[];
   allocations: Record<string, AllocationHolding[]>;
   monthlyHistory: MonthlyData[];
+  assetSummaries: AssetSummary[];
 }
 
 export interface TransactionData {
@@ -127,4 +128,18 @@ export interface ExchangeTotalSummary {
   avgRate: string;
   currentRate: string;
   diff: string;
+}
+
+export interface AssetSummary {
+  assetClass: string; // 계좌 (주식, 채권, 현금 등)
+  ticker: string; // 종목/티커
+  strategy: string; // 전략
+  investedKrw: string; // 원화 투자원금
+  investedUsd: string; // 외화 투자원금
+  currentKrw: string; // 원화 평가액
+  currentUsd: string; // 외화 평가액
+  profitAmount: string; // 손익액
+  profitRate: string; // 누적수익률
+  currency: string; // 통화
+  targetWeight: string; // 전체비중
 }

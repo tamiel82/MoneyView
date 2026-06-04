@@ -1,14 +1,17 @@
 import { getPortfolioData } from "@/lib/portfolioService";
 import AssetSummary from "@/components/dashboard/AssetSummary";
+import SummaryCards from "@/components/dashboard/SummaryCards";
 import AccountList from "@/components/dashboard/AccountList";
 import AssetChart from "@/components/dashboard/AssetChart";
+import IndexTicker from "@/components/dashboard/IndexTicker";
+import AssetStatusViewer from "@/components/dashboard/AssetStatusViewer";
 import IndexMonitor from "@/components/dashboard/IndexMonitor";
 import MonthlyChart from "@/components/dashboard/MonthlyChart";
 import AutoRefresh from "@/components/dashboard/AutoRefresh";
 
 export const revalidate = 60; // Cache for 60 seconds
 
-export default async function Home() {
+export default async function DashboardPage() {
   let portfolioData;
   let errorMsg = null;
 
@@ -29,7 +32,7 @@ export default async function Home() {
     );
   }
 
-  const { summary, accounts, indices, monthlyHistory } = portfolioData;
+  const { summary, accounts, indices, monthlyHistory, details } = portfolioData;
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -52,6 +55,11 @@ export default async function Home() {
         {/* 월별 자산 추이 (Full Width) */}
         <div className="md:col-span-12">
           <MonthlyChart data={monthlyHistory.filter(h => h.valuation > 0)} />
+        </div>
+
+        {/* 자산별 현황 카드 뷰 */}
+        <div className="md:col-span-12">
+          <AssetStatusViewer details={details} />
         </div>
       </div>
     </div>
