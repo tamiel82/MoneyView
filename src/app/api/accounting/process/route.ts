@@ -302,7 +302,9 @@ export async function POST(req: Request) {
           // Decrypt Toss Bank Excel
           let decryptedBuffer = buffer;
           if (officeCrypto.isEncrypted(buffer)) {
-             decryptedBuffer = await officeCrypto.decrypt(buffer, { password: String(pw) });
+             const file = officeCrypto.OfficeFile(buffer);
+             file.loadKey({ password: String(pw) });
+             decryptedBuffer = Buffer.from(file.decrypt());
           }
 
           const wb = xlsx.read(decryptedBuffer, { type: 'buffer' });
