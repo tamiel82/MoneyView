@@ -7,7 +7,8 @@ import Link from 'next/link';
 import TransactionGrid from '@/components/accounting/TransactionGrid';
 
 export default function AccountingDashboard() {
-  const [currentDate, setCurrentDate] = useState(new Date('2026-04-01'));
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [isInitializingDate, setIsInitializingDate] = useState(true);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [portfolioStats, setPortfolioStats] = useState<any>(null);
   const [monthlyStats, setMonthlyStats] = useState<any>({ real_estate: 0, liability_expr: '224000000+56465188+100000000' });
@@ -26,8 +27,23 @@ export default function AccountingDashboard() {
   const pfMonthStr2 = `${currentDate.getFullYear()}. ${currentDate.getMonth() + 1}.`;
 
   useEffect(() => {
-    fetchData();
-  }, [monthStr]);
+    fetch('/api/accounting/latest-month')
+      .then(res => res.json())
+      .then(data => {
+        if (data.latestMonth) {
+          setCurrentDate(new Date(data.latestMonth + '-01'));
+        }
+      })
+      .finally(() => {
+        setIsInitializingDate(false);
+      });
+  }, []);
+
+  useEffect(() => {
+    if (!isInitializingDate) {
+      fetchData();
+    }
+  }, [monthStr, isInitializingDate]);
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -359,7 +375,7 @@ export default function AccountingDashboard() {
         </div>
       </div>
 
-      {isLoading ? (
+      {isInitializingDate || isLoading ? (
         <div className="flex justify-center items-center h-64">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
