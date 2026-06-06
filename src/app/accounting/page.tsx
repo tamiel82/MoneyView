@@ -344,9 +344,7 @@ export default function AccountingDashboard() {
         </div>
         
         <div className="flex gap-3">
-          <Link href="/accounting/categories" className="flex items-center gap-2 px-4 py-2 bg-white/5 text-foreground hover:bg-white/10 font-medium rounded-lg transition-colors border border-white/10">
-            분류 기준 관리
-          </Link>
+
           <button 
             onClick={handleExport}
             disabled={isExporting || transactions.length === 0}

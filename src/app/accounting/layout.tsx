@@ -16,15 +16,7 @@ export default function AccountingLayout({ children }: { children: React.ReactNo
           <nav className="flex md:flex-col gap-2 md:gap-0 md:space-y-2 overflow-x-auto scrollbar-none">
             <Link href="/accounting" className="flex items-center gap-3 px-3 py-2 text-foreground rounded-md hover:bg-white/5 transition-colors whitespace-nowrap">
               <PieChart className="w-5 h-5 shrink-0" />
-              <span className="font-medium">월별가계부</span>
-            </Link>
-            <Link href="/accounting/import" className="flex items-center gap-3 px-3 py-2 text-foreground rounded-md hover:bg-white/5 transition-colors whitespace-nowrap">
-              <Upload className="w-5 h-5 shrink-0" />
-              <span className="font-medium">데이터 업로드</span>
-            </Link>
-            <Link href="/accounting/search" className="flex items-center gap-3 px-3 py-2 text-foreground rounded-md hover:bg-white/5 transition-colors whitespace-nowrap">
-              <Search className="w-5 h-5 shrink-0" />
-              <span className="font-medium">통합 검색</span>
+              <span className="font-medium">월별 가계부</span>
             </Link>
             <Link href="/accounting/ledger" className="flex items-center gap-3 px-3 py-2 text-foreground rounded-md hover:bg-white/5 transition-colors whitespace-nowrap">
               <FileSpreadsheet className="w-5 h-5 shrink-0" />
@@ -33,6 +25,10 @@ export default function AccountingLayout({ children }: { children: React.ReactNo
             <Link href="/accounting/categories" className="flex items-center gap-3 px-3 py-2 text-foreground rounded-md hover:bg-white/5 transition-colors whitespace-nowrap">
               <Receipt className="w-5 h-5 shrink-0" />
               <span className="font-medium">지출 분류 관리</span>
+            </Link>
+            <Link href="/accounting/search" className="flex items-center gap-3 px-3 py-2 text-foreground rounded-md hover:bg-white/5 transition-colors whitespace-nowrap">
+              <Search className="w-5 h-5 shrink-0" />
+              <span className="font-medium">통합 검색</span>
             </Link>
           </nav>
         </div>
