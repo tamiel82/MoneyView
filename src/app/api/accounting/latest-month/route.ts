@@ -8,6 +8,7 @@ export async function GET() {
     const { data, error } = await supabase
       .from('transactions')
       .select('date')
+      .like('date', '20%') // Only valid dates like 2026-xx-xx
       .order('date', { ascending: false })
       .limit(1)
       .single();
