@@ -361,6 +361,9 @@ export default function ImportPage() {
                     <th className="px-4 py-3 font-medium cursor-pointer hover:text-white" onClick={() => handleSort('merchant')}>
                       <div className="flex items-center gap-1">매출처 <ArrowUpDown size={12}/></div>
                     </th>
+                    <th className="px-4 py-3 font-medium cursor-pointer hover:text-white" onClick={() => handleSort('orderNo')}>
+                      <div className="flex items-center gap-1">주문번호 <ArrowUpDown size={12}/></div>
+                    </th>
                     <th className="px-4 py-3 font-medium">사업자</th>
                     <th className="px-4 py-3 font-medium">유형</th>
                     <th className="px-4 py-3 font-medium cursor-pointer hover:text-white" onClick={() => handleSort('category')}>
@@ -376,6 +379,7 @@ export default function ImportPage() {
                       <td className="px-4 py-3 text-right font-medium text-foreground">{tx.amount.toLocaleString()}</td>
                       <td className="px-4 py-3 text-muted-foreground">{tx.paymentMethod}</td>
                       <td className="px-4 py-3 max-w-[150px] truncate text-muted-foreground" title={tx.merchant || ''}>{tx.merchant || '-'}</td>
+                      <td className="px-4 py-3 text-muted-foreground text-xs">{tx.orderNo || '-'}</td>
                       <td className="px-4 py-3 text-muted-foreground">{tx.businessNum || '-'}</td>
                       <td className="px-4 py-3">
                         <select 
