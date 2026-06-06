@@ -1,16 +1,16 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Upload, CheckCircle, Loader2, Save, ExternalLink } from 'lucide-react';
+import { Upload, CheckCircle, Loader2, Save, ExternalLink, FileText, X } from 'lucide-react';
 import { RawTransaction } from '@/lib/accounting/types';
 import { useRouter } from 'next/navigation';
 
 export default function ImportPage() {
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [passwords, setPasswords] = useState({ dongmin: '820126', hyunjoo: '840416' });
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [transactions, setTransactions] = useState<(RawTransaction & { category: string | null })[]>([]);
-  const [parserName, setParserName] = useState<string | null>(null);
   const [parsedData, setParsedData] = useState<{ totalRows: number; unclassifiedRows: number } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -18,22 +18,35 @@ export default function ImportPage() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setFile(e.target.files[0]);
+      setFiles(prev => [...prev, ...Array.from(e.target.files!)]);
       setError(null);
     }
   };
 
+  const handleFileDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (e.dataTransfer.files?.length > 0) {
+      setFiles(prev => [...prev, ...Array.from(e.dataTransfer.files)]);
+      setError(null);
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleUpload = async () => {
-    if (!file) return;
+    if (files.length === 0) return;
 
     setIsUploading(true);
     setError(null);
 
     const formData = new FormData();
-    formData.append('file', file);
+    files.forEach(f => formData.append('files', f));
+    formData.append('passwords', JSON.stringify(passwords));
 
     try {
-      const res = await fetch('/api/accounting/upload', {
+      const res = await fetch('/api/accounting/process', {
         method: 'POST',
         body: formData,
       });
@@ -44,11 +57,24 @@ export default function ImportPage() {
         throw new Error(data.error || '업로드 실패');
       }
 
-      setTransactions(data.transactions);
-      setParserName(data.parserName);
+      // Map new Korean API keys to existing UI state keys
+      const mappedTransactions = data.transactions.map((t: any) => ({
+        date: t.거래일,
+        content: t.지출내용,
+        amount: t.지출금액,
+        category: t.소비분류 || '',
+        type: t.비고 === '입금' ? 'INCOME' : 'EXPENSE',
+        merchant: t.매출처 || '',
+        orderNo: t.주문번호 || '',
+        paymentMethod: t.결제수단 || '',
+        businessNum: t.사업자 || '',
+        note: t.비고 || ''
+      }));
+
+      setTransactions(mappedTransactions);
       setParsedData({
-        totalRows: data.transactions.length,
-        unclassifiedRows: data.transactions.filter((t: any) => !t.category).length
+        totalRows: mappedTransactions.length,
+        unclassifiedRows: mappedTransactions.filter((t: any) => !t.category || t.category === '미분류').length
       });
     } catch (err: any) {
       setError(err.message);
@@ -108,39 +134,68 @@ export default function ImportPage() {
       </div>
 
       {transactions.length === 0 && !isUploading && (
-        <div className="glass-card p-8 shadow-sm">
-          <div 
-            className="border-2 border-dashed border-white/20 rounded-xl p-12 text-center hover:bg-white/5 hover:border-white/40 transition-colors cursor-pointer"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <Upload className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-foreground mb-1">
-              {file ? file.name : "엑셀/CSV 파일 선택"}
-            </h3>
-            <p className="text-sm text-muted-foreground mb-6">
-              우리은행, 하나은행, KB카드, 신한카드, 현대카드 양식 지원
-            </p>
-            
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              className="hidden" 
-              accept=".xls,.xlsx,.csv"
-              onChange={handleFileChange}
-            />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="md:col-span-2 glass-card p-8 shadow-sm rounded-xl">
+            <h2 className="text-lg font-medium text-foreground mb-4">파일 업로드 (다중 선택 가능)</h2>
+            <div 
+              className="border-2 border-dashed border-white/20 rounded-xl p-12 text-center hover:bg-white/5 hover:border-white/40 transition-colors cursor-pointer"
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={e => e.preventDefault()}
+              onDrop={handleFileDrop}
+            >
+              <Upload className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-sm text-muted-foreground mb-6">
+                여기로 엑셀/HTML 파일을 끌어오거나 클릭해서 선택하세요
+              </p>
+              
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                className="hidden" 
+                multiple
+                accept=".xls,.xlsx,.csv,.html"
+                onChange={handleFileChange}
+              />
+            </div>
+
+            {files.length > 0 && (
+              <div className="mt-4 space-y-2">
+                {files.map((f, i) => (
+                  <div key={i} className="flex items-center justify-between bg-white/5 p-3 rounded-lg border border-white/10 text-sm">
+                    <div className="flex items-center gap-2 overflow-hidden">
+                      <FileText size={16} className="text-primary shrink-0" />
+                      <span className="truncate text-foreground">{f.name}</span>
+                    </div>
+                    <button onClick={(e) => { e.stopPropagation(); removeFile(i); }} className="text-muted-foreground hover:text-red-400"><X size={16} /></button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-6">
+            <div className="glass-card p-6 shadow-sm rounded-xl">
+              <h2 className="font-semibold text-foreground mb-4">토스뱅크 암호 입력</h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1">동민 비밀번호</label>
+                  <input type="password" value={passwords.dongmin} onChange={e => setPasswords({...passwords, dongmin: e.target.value})} className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-md text-sm text-white focus:ring-primary focus:border-primary" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1">현주 비밀번호</label>
+                  <input type="password" value={passwords.hyunjoo} onChange={e => setPasswords({...passwords, hyunjoo: e.target.value})} className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-md text-sm text-white focus:ring-primary focus:border-primary" />
+                </div>
+              </div>
+            </div>
 
             <button 
-              className={`px-6 py-2.5 rounded-full font-medium ${file ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'bg-white/5 text-muted-foreground cursor-not-allowed border border-white/10'}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleUpload();
-              }}
-              disabled={!file || isUploading}
+              className={`w-full py-3 rounded-xl font-medium shadow-sm transition-all ${files.length > 0 ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'bg-white/5 text-muted-foreground cursor-not-allowed border border-white/10'}`}
+              onClick={handleUpload}
+              disabled={files.length === 0 || isUploading}
             >
-              업로드 및 자동 분류 시작
+              업로드 및 자동 분석 시작
             </button>
-            
-            {error && <p className="text-red-400 mt-4 text-sm">{error}</p>}
+            {error && <p className="text-red-400 mt-2 text-sm">{error}</p>}
           </div>
         </div>
       )}
@@ -148,7 +203,7 @@ export default function ImportPage() {
       {isUploading && (
         <div className="flex flex-col items-center justify-center py-12 glass-card shadow-sm rounded-xl">
           <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
-          <p className="text-lg font-medium text-foreground">파일을 분석하고 자동 분류 중입니다...</p>
+          <p className="text-lg font-medium text-foreground">파일을 분석하고 사업지출 매칭 중입니다...</p>
         </div>
       )}
 
@@ -158,22 +213,22 @@ export default function ImportPage() {
             <div>
               <h2 className="text-lg font-bold flex items-center gap-2 text-foreground">
                 <CheckCircle className="text-emerald-500 w-5 h-5" />
-                분석 완료 ({file?.name})
+                분석 완료 ({files.length}개 파일)
               </h2>
               <p className="text-sm text-muted-foreground mt-1">
-                인식된 양식: <span className="font-semibold text-primary">{parserName}</span> | 총 {parsedData.totalRows}건 중 <span className="text-orange-400">{parsedData.unclassifiedRows}건 미분류</span>
+                총 {parsedData.totalRows}건 중 <span className="text-orange-400">{parsedData.unclassifiedRows}건 미분류</span>
               </p>
             </div>
             <div className="flex gap-3">
               <button
                 onClick={() => {
-                  setFile(null);
+                  setFiles([]);
                   setParsedData(null);
                   setTransactions([]);
                 }}
                 className="px-4 py-2 text-sm font-medium text-muted-foreground bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors"
               >
-                취소
+                다시 업로드
               </button>
               <button
                 onClick={handleSaveToLedger}
@@ -192,20 +247,24 @@ export default function ImportPage() {
                 <thead className="bg-black/40 text-muted-foreground border-b border-white/10">
                   <tr>
                     <th className="px-4 py-3 font-medium">거래일</th>
-                    <th className="px-4 py-3 font-medium">내용</th>
+                    <th className="px-4 py-3 font-medium">내용(가맹점)</th>
                     <th className="px-4 py-3 font-medium text-right">금액</th>
+                    <th className="px-4 py-3 font-medium">결제수단</th>
                     <th className="px-4 py-3 font-medium">매출처</th>
+                    <th className="px-4 py-3 font-medium">사업자</th>
                     <th className="px-4 py-3 font-medium">유형</th>
                     <th className="px-4 py-3 font-medium">분류 (수정가능)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
                   {transactions.map((tx, idx) => (
-                    <tr key={idx} className={`hover:bg-white/5 transition-colors ${!tx.category ? 'bg-orange-500/10' : ''}`}>
+                    <tr key={idx} className={`hover:bg-white/5 transition-colors ${!tx.category || tx.category === '미분류' ? 'bg-orange-500/10' : ''}`}>
                       <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">{tx.date}</td>
                       <td className="px-4 py-3 max-w-[200px] truncate text-foreground" title={tx.content || ''}>{tx.content}</td>
                       <td className="px-4 py-3 text-right font-medium text-foreground">{tx.amount.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{tx.paymentMethod}</td>
                       <td className="px-4 py-3 max-w-[150px] truncate text-muted-foreground" title={tx.merchant || ''}>{tx.merchant || '-'}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{tx.businessNum || '-'}</td>
                       <td className="px-4 py-3">
                         <select 
                           value={tx.type}
@@ -225,7 +284,7 @@ export default function ImportPage() {
                           onChange={(e) => handleCategoryChange(idx, e.target.value)}
                           placeholder="미분류"
                           className={`w-32 bg-transparent border-b focus:border-primary focus:ring-0 px-1 py-1 text-sm ${
-                            !tx.category ? 'border-orange-500/50 text-orange-400' : 'border-white/10 text-foreground'
+                            !tx.category || tx.category === '미분류' ? 'border-orange-500/50 text-orange-400' : 'border-white/10 text-foreground'
                           }`}
                         />
                       </td>
