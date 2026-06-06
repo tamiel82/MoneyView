@@ -81,15 +81,15 @@ export default function ImportPage() {
         note: t.비고 || ''
       }));
 
-      // Default sort by [Date, PaymentMethod] ascending
+      // Default sort by [PaymentMethod, Date] ascending
       mappedTransactions.sort((a: any, b: any) => {
-        if (a.date !== b.date) {
-          return a.date < b.date ? -1 : 1;
-        }
         const aMethod = a.paymentMethod || '';
         const bMethod = b.paymentMethod || '';
         if (aMethod !== bMethod) {
           return aMethod < bMethod ? -1 : 1;
+        }
+        if (a.date !== b.date) {
+          return a.date < b.date ? -1 : 1;
         }
         return 0;
       });
