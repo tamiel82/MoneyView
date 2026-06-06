@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import { Upload, CheckCircle, Loader2, Save, ExternalLink, FileText, X } from 'lucide-react';
+import { useState, useRef, useMemo } from 'react';
+import { Upload, CheckCircle, Loader2, Save, ExternalLink, FileText, X, Search, Filter, ArrowUpDown } from 'lucide-react';
 import { RawTransaction } from '@/lib/accounting/types';
 import { useRouter } from 'next/navigation';
 
@@ -10,9 +10,19 @@ export default function ImportPage() {
   const [passwords, setPasswords] = useState({ dongmin: '820126', hyunjoo: '840416' });
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [transactions, setTransactions] = useState<(RawTransaction & { category: string | null })[]>([]);
+  
+  // Use a custom type that includes an id for safe updates after filtering/sorting
+  type TxItem = RawTransaction & { id: string; category: string };
+  const [transactions, setTransactions] = useState<TxItem[]>([]);
+  
   const [parsedData, setParsedData] = useState<{ totalRows: number; unclassifiedRows: number } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Sorting and Filtering State
+  const [filterText, setFilterText] = useState('');
+  const [showUnclassified, setShowUnclassified] = useState(false);
+  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc'|'desc' } | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
@@ -57,8 +67,8 @@ export default function ImportPage() {
         throw new Error(data.error || '업로드 실패');
       }
 
-      // Map new Korean API keys to existing UI state keys
-      const mappedTransactions = data.transactions.map((t: any) => ({
+      const mappedTransactions = data.transactions.map((t: any, i: number) => ({
+        id: `tx-${Date.now()}-${i}`,
         date: t.거래일,
         content: t.지출내용,
         amount: t.지출금액,
@@ -76,6 +86,10 @@ export default function ImportPage() {
         totalRows: mappedTransactions.length,
         unclassifiedRows: mappedTransactions.filter((t: any) => !t.category || t.category === '미분류').length
       });
+      // Reset filters on new upload
+      setFilterText('');
+      setShowUnclassified(false);
+      setSortConfig(null);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -83,25 +97,30 @@ export default function ImportPage() {
     }
   };
 
-  const handleCategoryChange = (index: number, newCategory: string) => {
-    const updated = [...transactions];
-    updated[index].category = newCategory;
-    setTransactions(updated);
+  const handleCategoryChange = (id: string, newCategory: string) => {
+    setTransactions(prev => prev.map(tx => tx.id === id ? { ...tx, category: newCategory } : tx));
   };
 
-  const handleTypeChange = (index: number, newType: 'INCOME' | 'EXPENSE') => {
-    const updated = [...transactions];
-    updated[index].type = newType;
-    setTransactions(updated);
+  const handleTypeChange = (id: string, newType: 'INCOME' | 'EXPENSE') => {
+    setTransactions(prev => prev.map(tx => tx.id === id ? { ...tx, type: newType } : tx));
+  };
+
+  const handleSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
   };
 
   const handleSaveToLedger = async () => {
     setIsSaving(true);
     try {
+      const payloadTransactions = transactions.map(({ id, ...rest }) => rest);
       const res = await fetch('/api/accounting/transactions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transactions }),
+        body: JSON.stringify({ transactions: payloadTransactions }),
       });
       
       if (!res.ok) throw new Error('저장 실패');
@@ -114,6 +133,45 @@ export default function ImportPage() {
       setIsSaving(false);
     }
   };
+
+  const filteredAndSortedTransactions = useMemo(() => {
+    let result = [...transactions];
+
+    if (showUnclassified) {
+      result = result.filter(tx => !tx.category || tx.category === '미분류');
+    }
+
+    if (filterText) {
+      const lower = filterText.toLowerCase();
+      result = result.filter(tx => 
+        (tx.content && tx.content.toLowerCase().includes(lower)) ||
+        (tx.merchant && tx.merchant.toLowerCase().includes(lower)) ||
+        (tx.paymentMethod && tx.paymentMethod.toLowerCase().includes(lower)) ||
+        (tx.category && tx.category.toLowerCase().includes(lower))
+      );
+    }
+
+    if (sortConfig) {
+      result.sort((a, b) => {
+        let aValue = (a as any)[sortConfig.key] || '';
+        let bValue = (b as any)[sortConfig.key] || '';
+
+        if (sortConfig.key === 'amount') {
+          aValue = Number(aValue);
+          bValue = Number(bValue);
+        } else {
+          aValue = String(aValue);
+          bValue = String(bValue);
+        }
+
+        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return result;
+  }, [transactions, filterText, showUnclassified, sortConfig]);
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
@@ -216,7 +274,7 @@ export default function ImportPage() {
                 분석 완료 ({files.length}개 파일)
               </h2>
               <p className="text-sm text-muted-foreground mt-1">
-                총 {parsedData.totalRows}건 중 <span className="text-orange-400">{parsedData.unclassifiedRows}건 미분류</span>
+                총 {parsedData.totalRows}건 중 <span className="text-orange-400">{transactions.filter(t => !t.category || t.category === '미분류').length}건 미분류</span>
               </p>
             </div>
             <div className="flex gap-3">
@@ -241,24 +299,65 @@ export default function ImportPage() {
             </div>
           </div>
 
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between glass-card p-4 rounded-xl shadow-sm border-white/10">
+            <div className="flex flex-1 w-full gap-4 items-center">
+              <div className="relative flex-1 max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <input 
+                  type="text" 
+                  placeholder="내용, 결제수단, 매출처 검색..." 
+                  value={filterText}
+                  onChange={(e) => setFilterText(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 bg-black/40 border border-white/10 rounded-lg text-sm text-white focus:ring-primary focus:border-primary"
+                />
+              </div>
+              <button
+                onClick={() => setShowUnclassified(!showUnclassified)}
+                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border transition-colors ${
+                  showUnclassified 
+                    ? 'bg-orange-500/20 text-orange-400 border-orange-500/50' 
+                    : 'bg-white/5 text-muted-foreground border-white/10 hover:bg-white/10'
+                }`}
+              >
+                <Filter size={16} />
+                미분류만 보기
+              </button>
+            </div>
+            <div className="text-sm text-muted-foreground">
+              검색 결과: <span className="font-medium text-white">{filteredAndSortedTransactions.length}</span>건
+            </div>
+          </div>
+
           <div className="glass-card shadow-sm rounded-xl border-white/10 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
                 <thead className="bg-black/40 text-muted-foreground border-b border-white/10">
                   <tr>
-                    <th className="px-4 py-3 font-medium">거래일</th>
-                    <th className="px-4 py-3 font-medium">내용(가맹점)</th>
-                    <th className="px-4 py-3 font-medium text-right">금액</th>
-                    <th className="px-4 py-3 font-medium">결제수단</th>
-                    <th className="px-4 py-3 font-medium">매출처</th>
+                    <th className="px-4 py-3 font-medium cursor-pointer hover:text-white" onClick={() => handleSort('date')}>
+                      <div className="flex items-center gap-1">거래일 <ArrowUpDown size={12}/></div>
+                    </th>
+                    <th className="px-4 py-3 font-medium cursor-pointer hover:text-white" onClick={() => handleSort('content')}>
+                      <div className="flex items-center gap-1">내용(가맹점) <ArrowUpDown size={12}/></div>
+                    </th>
+                    <th className="px-4 py-3 font-medium text-right cursor-pointer hover:text-white" onClick={() => handleSort('amount')}>
+                      <div className="flex items-center justify-end gap-1">금액 <ArrowUpDown size={12}/></div>
+                    </th>
+                    <th className="px-4 py-3 font-medium cursor-pointer hover:text-white" onClick={() => handleSort('paymentMethod')}>
+                      <div className="flex items-center gap-1">결제수단 <ArrowUpDown size={12}/></div>
+                    </th>
+                    <th className="px-4 py-3 font-medium cursor-pointer hover:text-white" onClick={() => handleSort('merchant')}>
+                      <div className="flex items-center gap-1">매출처 <ArrowUpDown size={12}/></div>
+                    </th>
                     <th className="px-4 py-3 font-medium">사업자</th>
                     <th className="px-4 py-3 font-medium">유형</th>
-                    <th className="px-4 py-3 font-medium">분류 (수정가능)</th>
+                    <th className="px-4 py-3 font-medium cursor-pointer hover:text-white" onClick={() => handleSort('category')}>
+                      <div className="flex items-center gap-1">분류 (수정가능) <ArrowUpDown size={12}/></div>
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  {transactions.map((tx, idx) => (
-                    <tr key={idx} className={`hover:bg-white/5 transition-colors ${!tx.category || tx.category === '미분류' ? 'bg-orange-500/10' : ''}`}>
+                  {filteredAndSortedTransactions.map((tx) => (
+                    <tr key={tx.id} className={`hover:bg-white/5 transition-colors ${!tx.category || tx.category === '미분류' ? 'bg-orange-500/10' : ''}`}>
                       <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">{tx.date}</td>
                       <td className="px-4 py-3 max-w-[200px] truncate text-foreground" title={tx.content || ''}>{tx.content}</td>
                       <td className="px-4 py-3 text-right font-medium text-foreground">{tx.amount.toLocaleString()}</td>
@@ -268,7 +367,7 @@ export default function ImportPage() {
                       <td className="px-4 py-3">
                         <select 
                           value={tx.type}
-                          onChange={(e) => handleTypeChange(idx, e.target.value as 'INCOME' | 'EXPENSE')}
+                          onChange={(e) => handleTypeChange(tx.id, e.target.value as 'INCOME' | 'EXPENSE')}
                           className={`text-xs px-2 py-1 rounded-md border-0 font-medium cursor-pointer ${
                             tx.type === 'INCOME' ? 'bg-blue-500/20 text-blue-400' : 'bg-rose-500/20 text-rose-400'
                           }`}
@@ -281,7 +380,7 @@ export default function ImportPage() {
                         <input
                           type="text"
                           value={tx.category || ''}
-                          onChange={(e) => handleCategoryChange(idx, e.target.value)}
+                          onChange={(e) => handleCategoryChange(tx.id, e.target.value)}
                           placeholder="미분류"
                           className={`w-32 bg-transparent border-b focus:border-primary focus:ring-0 px-1 py-1 text-sm ${
                             !tx.category || tx.category === '미분류' ? 'border-orange-500/50 text-orange-400' : 'border-white/10 text-foreground'
