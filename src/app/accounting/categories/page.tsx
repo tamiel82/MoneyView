@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Pencil, Trash2, Plus, X, Check, Search } from 'lucide-react';
+import { Pencil, Trash2, Plus, X as XIcon, Check, Search, ChevronLeft } from 'lucide-react';
+import Link from 'next/link';
 
 interface Category {
   id: number;
@@ -113,16 +114,17 @@ export default function CategoriesPage() {
   );
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">가계부 지출 분류 관리</h1>
-          <p className="text-gray-500 mt-1">업로드된 거래내역의 가맹점명을 기준으로 소비분류를 자동 매핑합니다.</p>
-        </div>
+    <div className="p-8 max-w-5xl mx-auto">
+      <div className="flex items-center gap-4 mb-2">
+        <Link href="/accounting" className="p-2 hover:bg-white/10 rounded-full transition-colors text-muted-foreground"><ChevronLeft /></Link>
+        <h1 className="text-3xl font-bold text-foreground">지출 분류(가맹점 매핑) 관리</h1>
+      </div>
+      <div className="flex items-center justify-between mb-8 ml-14">
+        <p className="text-muted-foreground">업로드된 거래내역의 가맹점명을 기준으로 소비분류를 자동 매핑합니다.</p>
         <button
           onClick={handleAddNew}
           disabled={editingId === 'new'}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50"
+          className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50"
         >
           <Plus size={18} />
           새 분류 추가
@@ -130,52 +132,52 @@ export default function CategoriesPage() {
       </div>
 
       {error && (
-        <div className="bg-red-50 text-red-600 p-4 rounded-lg mb-6 flex items-center justify-between">
+        <div className="bg-rose-500/20 text-rose-400 p-4 rounded-lg mb-6 flex items-center justify-between border border-rose-500/50">
           <span>{error}</span>
-          <button onClick={() => setError(null)}><X size={18} /></button>
+          <button onClick={() => setError(null)}><XIcon size={18} /></button>
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="p-4 border-b border-gray-200 bg-gray-50 flex gap-4">
+      <div className="glass-card rounded-xl shadow-sm border border-white/10 overflow-hidden">
+        <div className="p-4 border-b border-white/10 bg-black/20 flex gap-4">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
             <input
               type="text"
               placeholder="가맹점 또는 분류 검색..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              className="w-full pl-10 pr-4 py-2 bg-black/40 border border-white/10 rounded-lg text-sm text-foreground focus:ring-primary focus:border-primary outline-none transition-colors"
             />
           </div>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-200 text-sm font-medium text-gray-500">
-                <th className="p-4 w-1/3">가맹점 (검색어)</th>
-                <th className="p-4 w-1/4">소비 분류</th>
-                <th className="p-4 w-1/3">비고</th>
-                <th className="p-4 w-24 text-right">관리</th>
+          <table className="w-full text-left text-sm">
+            <thead className="bg-black/40 text-muted-foreground border-b border-white/10">
+              <tr>
+                <th className="p-4 font-medium w-1/3">가맹점 (검색어)</th>
+                <th className="p-4 font-medium w-1/4">소비 분류</th>
+                <th className="p-4 font-medium w-1/3">비고</th>
+                <th className="p-4 font-medium w-24 text-center">관리</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 text-sm text-gray-700">
+            <tbody className="divide-y divide-white/5 text-foreground">
               {editingId === 'new' && (
-                <tr className="bg-blue-50">
+                <tr className="bg-primary/10 transition-colors">
                   <td className="p-3">
-                    <input autoFocus type="text" value={editForm.merchant} onChange={e => setEditForm({...editForm, merchant: e.target.value})} placeholder="가맹점 키워드" className="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" />
+                    <input autoFocus type="text" value={editForm.merchant} onChange={e => setEditForm({...editForm, merchant: e.target.value})} placeholder="가맹점 키워드" className="w-full px-3 py-1.5 bg-black/20 border border-white/10 rounded text-foreground focus:ring-primary focus:border-primary outline-none" />
                   </td>
                   <td className="p-3">
-                    <input type="text" value={editForm.category} onChange={e => setEditForm({...editForm, category: e.target.value})} placeholder="분류 (예: 식비, 사업지출)" className="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" />
+                    <input type="text" value={editForm.category} onChange={e => setEditForm({...editForm, category: e.target.value})} placeholder="분류 (예: 식비, 사업지출)" className="w-full px-3 py-1.5 bg-black/20 border border-white/10 rounded text-foreground focus:ring-primary focus:border-primary outline-none" />
                   </td>
                   <td className="p-3">
-                    <input type="text" value={editForm.note} onChange={e => setEditForm({...editForm, note: e.target.value})} placeholder="비고" className="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" />
+                    <input type="text" value={editForm.note} onChange={e => setEditForm({...editForm, note: e.target.value})} placeholder="비고" className="w-full px-3 py-1.5 bg-black/20 border border-white/10 rounded text-foreground focus:ring-primary focus:border-primary outline-none" />
                   </td>
-                  <td className="p-3 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button onClick={handleSave} className="p-1.5 text-green-600 hover:bg-green-100 rounded transition-colors"><Check size={18} /></button>
-                      <button onClick={handleCancel} className="p-1.5 text-gray-500 hover:bg-gray-200 rounded transition-colors"><X size={18} /></button>
+                  <td className="p-3 text-center">
+                    <div className="flex items-center justify-center gap-1.5">
+                      <button onClick={handleSave} className="p-1.5 text-emerald-400 bg-emerald-400/10 hover:bg-emerald-400/20 rounded transition-colors" title="저장"><Check size={16} /></button>
+                      <button onClick={handleCancel} className="p-1.5 text-slate-400 bg-white/5 hover:bg-white/10 rounded transition-colors" title="취소"><XIcon size={16} /></button>
                     </div>
                   </td>
                 </tr>
@@ -183,46 +185,46 @@ export default function CategoriesPage() {
               
               {loading ? (
                 <tr>
-                  <td colSpan={4} className="p-8 text-center text-gray-500">데이터를 불러오는 중...</td>
+                  <td colSpan={4} className="p-8 text-center text-muted-foreground">데이터를 불러오는 중...</td>
                 </tr>
               ) : filteredCategories.length === 0 && editingId !== 'new' ? (
                 <tr>
-                  <td colSpan={4} className="p-8 text-center text-gray-500">등록된 분류 기준이 없습니다.</td>
+                  <td colSpan={4} className="p-8 text-center text-muted-foreground">등록된 분류 기준이 없습니다.</td>
                 </tr>
               ) : (
                 filteredCategories.map(cat => (
-                  <tr key={cat.id} className="hover:bg-gray-50 group">
+                  <tr key={cat.id} className={`group transition-colors ${editingId === cat.id ? 'bg-white/5 shadow-inner border-y border-primary/20' : 'hover:bg-white/5'}`}>
                     {editingId === cat.id ? (
                       <>
                         <td className="p-3">
-                          <input autoFocus type="text" value={editForm.merchant} onChange={e => setEditForm({...editForm, merchant: e.target.value})} className="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" />
+                          <input autoFocus type="text" value={editForm.merchant} onChange={e => setEditForm({...editForm, merchant: e.target.value})} className="w-full px-3 py-1.5 bg-black/20 border border-white/10 rounded text-foreground focus:ring-primary focus:border-primary outline-none" />
                         </td>
                         <td className="p-3">
-                          <input type="text" value={editForm.category} onChange={e => setEditForm({...editForm, category: e.target.value})} className="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" />
+                          <input type="text" value={editForm.category} onChange={e => setEditForm({...editForm, category: e.target.value})} className="w-full px-3 py-1.5 bg-black/20 border border-white/10 rounded text-foreground focus:ring-primary focus:border-primary outline-none" />
                         </td>
                         <td className="p-3">
-                          <input type="text" value={editForm.note} onChange={e => setEditForm({...editForm, note: e.target.value})} className="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" />
+                          <input type="text" value={editForm.note} onChange={e => setEditForm({...editForm, note: e.target.value})} className="w-full px-3 py-1.5 bg-black/20 border border-white/10 rounded text-foreground focus:ring-primary focus:border-primary outline-none" />
                         </td>
-                        <td className="p-3 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <button onClick={handleSave} className="p-1.5 text-green-600 hover:bg-green-100 rounded transition-colors"><Check size={18} /></button>
-                            <button onClick={handleCancel} className="p-1.5 text-gray-500 hover:bg-gray-200 rounded transition-colors"><X size={18} /></button>
+                        <td className="p-3 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button onClick={handleSave} className="p-1.5 text-emerald-400 bg-emerald-400/10 hover:bg-emerald-400/20 rounded transition-colors"><Check size={16} /></button>
+                            <button onClick={handleCancel} className="p-1.5 text-slate-400 bg-white/5 hover:bg-white/10 rounded transition-colors"><XIcon size={16} /></button>
                           </div>
                         </td>
                       </>
                     ) : (
                       <>
-                        <td className="p-4 font-medium">{cat.merchant}</td>
+                        <td className="p-4 font-medium text-foreground">{cat.merchant}</td>
                         <td className="p-4">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded text-[11px] font-semibold bg-blue-500/20 text-blue-400">
                             {cat.category}
                           </span>
                         </td>
-                        <td className="p-4 text-gray-500">{cat.note}</td>
-                        <td className="p-4 text-right">
-                          <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => handleEdit(cat)} className="p-1.5 text-gray-500 hover:bg-gray-200 hover:text-blue-600 rounded transition-colors"><Pencil size={16} /></button>
-                            <button onClick={() => handleDelete(cat.id)} className="p-1.5 text-gray-500 hover:bg-gray-200 hover:text-red-600 rounded transition-colors"><Trash2 size={16} /></button>
+                        <td className="p-4 text-muted-foreground">{cat.note || '-'}</td>
+                        <td className="p-4 text-center">
+                          <div className="flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => handleEdit(cat)} className="p-1.5 text-muted-foreground hover:bg-white/10 hover:text-primary rounded transition-colors" title="수정"><Pencil size={16} /></button>
+                            <button onClick={() => handleDelete(cat.id)} className="p-1.5 text-rose-400 hover:bg-rose-400/20 rounded transition-colors" title="삭제"><Trash2 size={16} /></button>
                           </div>
                         </td>
                       </>

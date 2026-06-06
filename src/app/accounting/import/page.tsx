@@ -4,6 +4,7 @@ import { useState, useRef, useMemo } from 'react';
 import { Upload, CheckCircle, Loader2, Save, ExternalLink, FileText, X as XIcon, Search, Filter, ArrowUpDown, Pencil, Trash2, Check } from 'lucide-react';
 import { RawTransaction } from '@/lib/accounting/types';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export default function ImportPage() {
   const [files, setFiles] = useState<File[]>([]);
@@ -216,7 +217,12 @@ export default function ImportPage() {
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
-      <h1 className="text-3xl font-bold mb-2 text-foreground">데이터 업로드</h1>
+      <div className="flex items-center justify-between mb-2">
+        <h1 className="text-3xl font-bold text-foreground">데이터 업로드</h1>
+        <Link href="/accounting/categories" className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 hover:bg-white/10 text-foreground font-medium rounded-lg transition-colors">
+          지출 분류 기준 관리
+        </Link>
+      </div>
       <p className="text-muted-foreground mb-6">은행이나 카드사의 엑셀 거래내역을 업로드하여 자동으로 분류합니다.</p>
 
       {/* 다운로드 링크 섹션 */}
