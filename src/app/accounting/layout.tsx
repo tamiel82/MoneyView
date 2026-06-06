@@ -26,6 +26,10 @@ export default function AccountingLayout({ children }: { children: React.ReactNo
               <FileSpreadsheet className="w-5 h-5 shrink-0" />
               <span className="font-medium">연도별 결산</span>
             </Link>
+            <Link href="/accounting/categories" className="flex items-center gap-3 px-3 py-2 text-foreground rounded-md hover:bg-white/5 transition-colors whitespace-nowrap">
+              <Receipt className="w-5 h-5 shrink-0" />
+              <span className="font-medium">지출 분류 관리</span>
+            </Link>
           </nav>
         </div>
       </aside>
