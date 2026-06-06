@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Upload, CheckCircle, Loader2, Save } from 'lucide-react';
+import { Upload, CheckCircle, Loader2, Save, ExternalLink } from 'lucide-react';
 import { RawTransaction } from '@/lib/accounting/types';
 import { useRouter } from 'next/navigation';
 
@@ -92,7 +92,20 @@ export default function ImportPage() {
   return (
     <div className="p-8 max-w-6xl mx-auto">
       <h1 className="text-3xl font-bold mb-2 text-foreground">데이터 업로드</h1>
-      <p className="text-muted-foreground mb-8">은행이나 카드사의 엑셀 거래내역을 업로드하여 자동으로 분류합니다.</p>
+      <p className="text-muted-foreground mb-6">은행이나 카드사의 엑셀 거래내역을 업로드하여 자동으로 분류합니다.</p>
+
+      {/* 다운로드 링크 섹션 */}
+      <div className="mb-8 p-6 glass-card shadow-sm rounded-xl border-white/10">
+        <h2 className="text-sm font-semibold text-foreground mb-4">거래내역 다운로드 바로가기</h2>
+        <div className="flex flex-wrap gap-3">
+          <a href="https://card.kbkookmin.com" target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-white/5 border border-white/10 hover:bg-primary/20 hover:text-primary hover:border-primary/50 transition-colors text-muted-foreground">KB국민카드 <ExternalLink size={14} /></a>
+          <a href="https://www.shinhancard.com" target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-white/5 border border-white/10 hover:bg-primary/20 hover:text-primary hover:border-primary/50 transition-colors text-muted-foreground">신한카드 <ExternalLink size={14} /></a>
+          <a href="https://www.hyundaicard.com" target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-white/5 border border-white/10 hover:bg-primary/20 hover:text-primary hover:border-primary/50 transition-colors text-muted-foreground">현대카드 <ExternalLink size={14} /></a>
+          <a href="https://pc.wooricard.com/" target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-white/5 border border-white/10 hover:bg-primary/20 hover:text-primary hover:border-primary/50 transition-colors text-muted-foreground">우리카드 <ExternalLink size={14} /></a>
+          <a href="https://www.wooribank.com" target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-white/5 border border-white/10 hover:bg-primary/20 hover:text-primary hover:border-primary/50 transition-colors text-muted-foreground">우리은행 <ExternalLink size={14} /></a>
+          <a href="https://www.kebhana.com" target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-white/5 border border-white/10 hover:bg-primary/20 hover:text-primary hover:border-primary/50 transition-colors text-muted-foreground">하나은행 <ExternalLink size={14} /></a>
+        </div>
+      </div>
 
       {transactions.length === 0 && !isUploading && (
         <div className="glass-card p-8 shadow-sm">
