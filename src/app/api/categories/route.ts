@@ -34,7 +34,7 @@ export async function POST(req: Request) {
 
     if (error) {
       if (error.code === '23505') { // unique violation
-        return NextResponse.json({ error: 'Merchant already exists' }, { status: 409 });
+        return NextResponse.json({ error: '이미 등록된 가맹점(키워드)입니다. 목록에서 검색하여 수정해주세요.' }, { status: 409 });
       }
       throw error;
     }
@@ -64,7 +64,7 @@ export async function PUT(req: Request) {
 
     if (error) {
       if (error.code === '23505') {
-        return NextResponse.json({ error: 'Merchant already exists' }, { status: 409 });
+        return NextResponse.json({ error: '이미 등록된 가맹점(키워드)입니다.' }, { status: 409 });
       }
       throw error;
     }
