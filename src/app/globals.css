@@ -38,8 +38,8 @@ body {
 }
 
 select option {
-  background-color: var(--card);
-  color: var(--foreground);
+  background-color: #09090b !important;
+  color: #ffffff !important;
 }
 
 /* Glassmorphism Utilities */

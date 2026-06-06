@@ -264,15 +264,15 @@ export default function TransactionGrid({ transactions, onRefresh, monthStr }: T
                     // clear category when switching types to avoid invalid category
                     setAddForm({...addForm, type: newType, category: ''});
                   }} className="w-full bg-black/20 border border-white/10 rounded px-1 py-1 text-foreground text-xs">
-                    <option value="EXPENSE">지출</option>
-                    <option value="INCOME">수입</option>
+                    <option value="EXPENSE" className="bg-black text-white">지출</option>
+                    <option value="INCOME" className="bg-black text-white">수입</option>
                   </select>
                 </td>
                 <td className="px-2 py-2">
                   <select value={addForm.category || ''} onChange={e => setAddForm({...addForm, category: e.target.value})} className="w-full bg-black/20 border border-white/10 rounded px-1 py-1 text-foreground text-xs">
-                    <option value="">(선택)</option>
+                    <option value="" className="bg-black text-white">(선택)</option>
                     {getCategoryOptions(addForm.type).map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
+                      <option key={cat} value={cat} className="bg-black text-white">{cat}</option>
                     ))}
                   </select>
                 </td>
@@ -290,9 +290,9 @@ export default function TransactionGrid({ transactions, onRefresh, monthStr }: T
                 </td>
                 <td className="px-2 py-2">
                   <select value={addForm.businessNum || ''} onChange={e => setAddForm({...addForm, businessNum: e.target.value})} className="w-full bg-black/20 border border-white/10 rounded px-1 py-1 text-foreground text-xs">
-                    <option value="">(없음)</option>
-                    <option value="더엠제이">더엠제이</option>
-                    <option value="동주">동주</option>
+                    <option value="" className="bg-black text-white">(없음)</option>
+                    <option value="더엠제이" className="bg-black text-white">더엠제이</option>
+                    <option value="동주" className="bg-black text-white">동주</option>
                   </select>
                 </td>
                 <td className="px-2 py-2">
@@ -322,15 +322,15 @@ export default function TransactionGrid({ transactions, onRefresh, monthStr }: T
                         // clear category if invalid
                         setEditForm({...editForm, type: newType, category: ''});
                       }} className="w-full bg-black/20 border border-white/10 rounded px-1 py-1 text-foreground text-xs">
-                        <option value="EXPENSE">지출</option>
-                        <option value="INCOME">수입</option>
+                        <option value="EXPENSE" className="bg-black text-white">지출</option>
+                        <option value="INCOME" className="bg-black text-white">수입</option>
                       </select>
                     </td>
                     <td className="px-2 py-2">
                       <select value={editForm.category || ''} onChange={e => setEditForm({...editForm, category: e.target.value})} className="w-full bg-black/20 border border-white/10 rounded px-1 py-1 text-foreground text-xs min-w-[80px]">
-                        <option value="">(선택)</option>
+                        <option value="" className="bg-black text-white">(선택)</option>
                         {getCategoryOptions(editForm.type).map(cat => (
-                          <option key={cat} value={cat}>{cat}</option>
+                          <option key={cat} value={cat} className="bg-black text-white">{cat}</option>
                         ))}
                       </select>
                     </td>
@@ -348,9 +348,9 @@ export default function TransactionGrid({ transactions, onRefresh, monthStr }: T
                     </td>
                     <td className="px-2 py-2">
                       <select value={editForm.businessNum || ''} onChange={e => setEditForm({...editForm, businessNum: e.target.value})} className="w-full bg-black/20 border border-white/10 rounded px-1 py-1 text-foreground text-xs min-w-[70px]">
-                        <option value="">(없음)</option>
-                        <option value="더엠제이">더엠제이</option>
-                        <option value="동주">동주</option>
+                        <option value="" className="bg-black text-white">(없음)</option>
+                        <option value="더엠제이" className="bg-black text-white">더엠제이</option>
+                        <option value="동주" className="bg-black text-white">동주</option>
                       </select>
                     </td>
                     <td className="px-2 py-2">
