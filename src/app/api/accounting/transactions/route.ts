@@ -61,10 +61,15 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const month = searchParams.get('month'); // YYYY-MM
+    const search = searchParams.get('search'); // query string
     
     let query = supabase.from('transactions').select('*');
     
-    if (month) {
+    if (search) {
+      query = query.or(`content.ilike.%${search}%,merchant.ilike.%${search}%,note.ilike.%${search}%,category.ilike.%${search}%,paymentMethod.ilike.%${search}%,businessNum.ilike.%${search}%`)
+                   .order('date', { ascending: false })
+                   .limit(1000);
+    } else if (month) {
       query = query.like('date', `${month}-%`).order('date', { ascending: false });
     } else {
       query = query.order('date', { ascending: false }).limit(1000);

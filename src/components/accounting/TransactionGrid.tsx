@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { Pencil, Trash2, Check, X as XIcon, Plus, ChevronsUpDown, ChevronUp, ChevronDown, Filter } from 'lucide-react';
 import { RawTransaction } from '@/lib/accounting/types';
 
-interface Transaction extends RawTransaction {
+export interface Transaction extends RawTransaction {
   id: number;
   category: string;
 }
@@ -12,7 +12,7 @@ interface Transaction extends RawTransaction {
 interface TransactionGridProps {
   transactions: Transaction[];
   onRefresh: () => void;
-  monthStr: string;
+  monthStr?: string;
 }
 
 type SortConfig = { key: keyof Transaction | ''; direction: 'asc' | 'desc' };
@@ -26,7 +26,7 @@ export default function TransactionGrid({ transactions, onRefresh, monthStr }: T
   
   const [isAdding, setIsAdding] = useState(false);
   const [addForm, setAddForm] = useState<Partial<Transaction>>({
-    date: `${monthStr}-01`,
+    date: monthStr ? `${monthStr}-01` : new Date().toISOString().split('T')[0],
     type: 'EXPENSE',
     amount: 0,
     content: '',
@@ -170,7 +170,7 @@ export default function TransactionGrid({ transactions, onRefresh, monthStr }: T
       if (!res.ok) throw new Error('추가 실패');
       setIsAdding(false);
       setAddForm({
-        date: `${monthStr}-01`,
+        date: monthStr ? `${monthStr}-01` : new Date().toISOString().split('T')[0],
         type: 'EXPENSE',
         amount: 0,
         content: '',

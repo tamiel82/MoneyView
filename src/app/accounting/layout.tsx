@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { Receipt, Upload, PieChart, FileSpreadsheet } from 'lucide-react';
+import { Receipt, Upload, PieChart, FileSpreadsheet, Search } from 'lucide-react';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
@@ -21,6 +21,10 @@ export default function AccountingLayout({ children }: { children: React.ReactNo
             <Link href="/accounting/import" className="flex items-center gap-3 px-3 py-2 text-foreground rounded-md hover:bg-white/5 transition-colors whitespace-nowrap">
               <Upload className="w-5 h-5 shrink-0" />
               <span className="font-medium">데이터 업로드</span>
+            </Link>
+            <Link href="/accounting/search" className="flex items-center gap-3 px-3 py-2 text-foreground rounded-md hover:bg-white/5 transition-colors whitespace-nowrap">
+              <Search className="w-5 h-5 shrink-0" />
+              <span className="font-medium">통합 검색</span>
             </Link>
             <Link href="/accounting/ledger" className="flex items-center gap-3 px-3 py-2 text-foreground rounded-md hover:bg-white/5 transition-colors whitespace-nowrap">
               <FileSpreadsheet className="w-5 h-5 shrink-0" />
