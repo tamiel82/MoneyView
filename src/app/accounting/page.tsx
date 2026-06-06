@@ -79,7 +79,7 @@ export default function AccountingDashboard() {
   const handleExport = async () => {
     setIsExporting(true);
     try {
-      const res = await fetch(`/api/accounting/export?month=${monthStr}`);
+      const res = await fetch(`/api/accounting/export?month=${monthStr}&t=${Date.now()}`);
       if (!res.ok) throw new Error('Export failed');
       
       const blob = await res.blob();

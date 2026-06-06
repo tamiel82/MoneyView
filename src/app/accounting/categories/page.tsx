@@ -39,8 +39,10 @@ export default function CategoriesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  // Search state
+  // Search, Filter, Sort state
   const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('ALL');
+  const [sortBy, setSortBy] = useState('CAT_MERCHANT_ASC');
 
   // Edit/Add state
   const [editingId, setEditingId] = useState<number | 'new' | null>(null);
@@ -57,7 +59,7 @@ export default function CategoriesPage() {
   const fetchCategories = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/categories');
+      const res = await fetch(`/api/categories?t=${Date.now()}`);
       if (!res.ok) throw new Error('Failed to fetch categories');
       const data = await res.json();
       setCategories(data);
@@ -131,15 +133,25 @@ export default function CategoriesPage() {
     }
   };
 
-  const filteredCategories = categories.filter(c => 
-    c.merchant.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    c.category.toLowerCase().includes(searchQuery.toLowerCase())
-  ).sort((a, b) => {
-    if (a.category < b.category) return -1;
-    if (a.category > b.category) return 1;
-    if (a.merchant < b.merchant) return -1;
-    if (a.merchant > b.merchant) return 1;
-    return 0;
+  const filteredCategories = categories.filter(c => {
+    const matchesSearch = c.merchant.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          c.category.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = categoryFilter === 'ALL' || c.category === categoryFilter;
+    return matchesSearch && matchesCategory;
+  }).sort((a, b) => {
+    switch (sortBy) {
+      case 'MERCHANT_ASC': return a.merchant.localeCompare(b.merchant);
+      case 'MERCHANT_DESC': return b.merchant.localeCompare(a.merchant);
+      case 'CAT_ASC': return a.category.localeCompare(b.category);
+      case 'CAT_DESC': return b.category.localeCompare(a.category);
+      case 'CAT_MERCHANT_ASC':
+      default:
+        if (a.category < b.category) return -1;
+        if (a.category > b.category) return 1;
+        if (a.merchant < b.merchant) return -1;
+        if (a.merchant > b.merchant) return 1;
+        return 0;
+    }
   });
 
   return (
@@ -168,7 +180,7 @@ export default function CategoriesPage() {
       )}
 
       <div className="glass-card rounded-xl shadow-sm border border-white/10 overflow-hidden">
-        <div className="p-4 border-b border-white/10 bg-black/20 flex gap-4">
+        <div className="p-4 border-b border-white/10 bg-black/20 flex flex-col md:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
             <input
@@ -178,6 +190,29 @@ export default function CategoriesPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2 bg-black/40 border border-white/10 rounded-lg text-sm text-foreground focus:ring-primary focus:border-primary outline-none transition-colors"
             />
+          </div>
+          <div className="flex gap-2 shrink-0">
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="px-3 py-2 bg-black/40 border border-white/10 rounded-lg text-sm text-foreground focus:ring-primary focus:border-primary outline-none transition-colors"
+            >
+              <option value="ALL" className="bg-black text-white">전체 분류</option>
+              {ALL_CATEGORIES.map(cat => (
+                <option key={cat} value={cat} className="bg-black text-white">{cat}</option>
+              ))}
+            </select>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="px-3 py-2 bg-black/40 border border-white/10 rounded-lg text-sm text-foreground focus:ring-primary focus:border-primary outline-none transition-colors"
+            >
+              <option value="CAT_MERCHANT_ASC" className="bg-black text-white">분류/가맹점 (기본)</option>
+              <option value="MERCHANT_ASC" className="bg-black text-white">가맹점명 오름차순</option>
+              <option value="MERCHANT_DESC" className="bg-black text-white">가맹점명 내림차순</option>
+              <option value="CAT_ASC" className="bg-black text-white">분류명 오름차순</option>
+              <option value="CAT_DESC" className="bg-black text-white">분류명 내림차순</option>
+            </select>
           </div>
         </div>
 

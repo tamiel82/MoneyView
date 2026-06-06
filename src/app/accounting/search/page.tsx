@@ -21,7 +21,7 @@ export default function SearchPage() {
       setError(null);
       setSearchQuery(query);
       setHasSearched(true);
-      const res = await fetch(`/api/accounting/transactions?search=${encodeURIComponent(query)}`);
+      const res = await fetch(`/api/accounting/transactions?search=${encodeURIComponent(query)}&t=${Date.now()}`);
       if (!res.ok) throw new Error('데이터를 불러오는데 실패했습니다.');
       const data = await res.json();
       setTransactions(data.transactions || []);
