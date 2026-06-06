@@ -11,6 +11,29 @@ interface Category {
   note: string | null;
 }
 
+const ALL_CATEGORIES = [
+  '국내구매', '해외구매', '음식', '물건', '몸', '취미', '경험', '관계', 
+  '관리비', '통신비', '교통비', '세금', '대출', '보험', '청약', 
+  '사업세금', '기타경비', '사업지출', '사업소득', '기타'
+];
+
+const getCategoryColor = (category: string) => {
+  switch (category) {
+    case '음식': case '물건': case '관리비': case '통신비': case '교통비':
+      return 'bg-slate-500/20 text-slate-300 border border-slate-500/30';
+    case '취미': case '경험': case '관계': case '몸':
+      return 'bg-purple-500/20 text-purple-300 border border-purple-500/30';
+    case '세금': case '대출': case '보험': case '청약':
+      return 'bg-rose-500/20 text-rose-300 border border-rose-500/30';
+    case '국내구매': case '해외구매':
+      return 'bg-blue-500/20 text-blue-300 border border-blue-500/30';
+    case '사업지출': case '사업소득': case '사업세금': case '기타경비':
+      return 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+    default:
+      return 'bg-gray-500/20 text-gray-300 border border-gray-500/30';
+  }
+};
+
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -111,7 +134,13 @@ export default function CategoriesPage() {
   const filteredCategories = categories.filter(c => 
     c.merchant.toLowerCase().includes(searchQuery.toLowerCase()) || 
     c.category.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  ).sort((a, b) => {
+    if (a.category < b.category) return -1;
+    if (a.category > b.category) return 1;
+    if (a.merchant < b.merchant) return -1;
+    if (a.merchant > b.merchant) return 1;
+    return 0;
+  });
 
   return (
     <div className="p-8 max-w-5xl mx-auto">
@@ -169,7 +198,16 @@ export default function CategoriesPage() {
                     <input autoFocus type="text" value={editForm.merchant} onChange={e => setEditForm({...editForm, merchant: e.target.value})} placeholder="가맹점 키워드" className="w-full px-3 py-1.5 bg-black/20 border border-white/10 rounded text-foreground focus:ring-primary focus:border-primary outline-none" />
                   </td>
                   <td className="p-3">
-                    <input type="text" value={editForm.category} onChange={e => setEditForm({...editForm, category: e.target.value})} placeholder="분류 (예: 식비, 사업지출)" className="w-full px-3 py-1.5 bg-black/20 border border-white/10 rounded text-foreground focus:ring-primary focus:border-primary outline-none" />
+                    <select 
+                      value={editForm.category} 
+                      onChange={e => setEditForm({...editForm, category: e.target.value})} 
+                      className="w-full px-3 py-1.5 bg-black/20 border border-white/10 rounded text-foreground focus:ring-primary focus:border-primary outline-none"
+                    >
+                      <option value="" className="bg-black text-white">분류 선택</option>
+                      {ALL_CATEGORIES.map(cat => (
+                        <option key={cat} value={cat} className="bg-black text-white">{cat}</option>
+                      ))}
+                    </select>
                   </td>
                   <td className="p-3">
                     <input type="text" value={editForm.note} onChange={e => setEditForm({...editForm, note: e.target.value})} placeholder="비고" className="w-full px-3 py-1.5 bg-black/20 border border-white/10 rounded text-foreground focus:ring-primary focus:border-primary outline-none" />
@@ -200,7 +238,16 @@ export default function CategoriesPage() {
                           <input autoFocus type="text" value={editForm.merchant} onChange={e => setEditForm({...editForm, merchant: e.target.value})} className="w-full px-3 py-1.5 bg-black/20 border border-white/10 rounded text-foreground focus:ring-primary focus:border-primary outline-none" />
                         </td>
                         <td className="p-3">
-                          <input type="text" value={editForm.category} onChange={e => setEditForm({...editForm, category: e.target.value})} className="w-full px-3 py-1.5 bg-black/20 border border-white/10 rounded text-foreground focus:ring-primary focus:border-primary outline-none" />
+                          <select 
+                            value={editForm.category} 
+                            onChange={e => setEditForm({...editForm, category: e.target.value})} 
+                            className="w-full px-3 py-1.5 bg-black/20 border border-white/10 rounded text-foreground focus:ring-primary focus:border-primary outline-none"
+                          >
+                            <option value="" className="bg-black text-white">분류 선택</option>
+                            {ALL_CATEGORIES.map(cat => (
+                              <option key={cat} value={cat} className="bg-black text-white">{cat}</option>
+                            ))}
+                          </select>
                         </td>
                         <td className="p-3">
                           <input type="text" value={editForm.note} onChange={e => setEditForm({...editForm, note: e.target.value})} className="w-full px-3 py-1.5 bg-black/20 border border-white/10 rounded text-foreground focus:ring-primary focus:border-primary outline-none" />
@@ -216,7 +263,7 @@ export default function CategoriesPage() {
                       <>
                         <td className="p-4 font-medium text-foreground">{cat.merchant}</td>
                         <td className="p-4">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded text-[11px] font-semibold bg-blue-500/20 text-blue-400">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-[11px] font-semibold ${getCategoryColor(cat.category)}`}>
                             {cat.category}
                           </span>
                         </td>
