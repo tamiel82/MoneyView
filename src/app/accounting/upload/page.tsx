@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Upload, X, FileText, CheckCircle2, AlertCircle, Save, ArrowRight } from 'lucide-react';
+import { Upload, X, FileText, CheckCircle2, AlertCircle, Save, ArrowRight, ExternalLink } from 'lucide-react';
 
 interface Transaction {
   거래일: string;
@@ -97,6 +97,18 @@ export default function AccountingUploadPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Upload Section */}
         <div className="lg:col-span-1 space-y-6">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <h2 className="font-semibold text-gray-800 mb-4">거래내역 다운로드 (바로가기)</h2>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <a href="https://card.kbkookmin.com" target="_blank" rel="noreferrer" className="flex items-center justify-between p-2.5 rounded border border-gray-100 bg-gray-50 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-100 text-gray-700 transition-colors">KB국민카드 <ExternalLink size={14} /></a>
+              <a href="https://www.shinhancard.com" target="_blank" rel="noreferrer" className="flex items-center justify-between p-2.5 rounded border border-gray-100 bg-gray-50 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-100 text-gray-700 transition-colors">신한카드 <ExternalLink size={14} /></a>
+              <a href="https://www.hyundaicard.com" target="_blank" rel="noreferrer" className="flex items-center justify-between p-2.5 rounded border border-gray-100 bg-gray-50 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-100 text-gray-700 transition-colors">현대카드 <ExternalLink size={14} /></a>
+              <a href="https://pc.wooricard.com/" target="_blank" rel="noreferrer" className="flex items-center justify-between p-2.5 rounded border border-gray-100 bg-gray-50 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-100 text-gray-700 transition-colors">우리카드 <ExternalLink size={14} /></a>
+              <a href="https://www.wooribank.com" target="_blank" rel="noreferrer" className="flex items-center justify-between p-2.5 rounded border border-gray-100 bg-gray-50 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-100 text-gray-700 transition-colors">우리은행 <ExternalLink size={14} /></a>
+              <a href="https://www.kebhana.com" target="_blank" rel="noreferrer" className="flex items-center justify-between p-2.5 rounded border border-gray-100 bg-gray-50 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-100 text-gray-700 transition-colors">하나은행 <ExternalLink size={14} /></a>
+            </div>
+          </div>
+
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
             <h2 className="font-semibold text-gray-800 mb-4">1. 파일 업로드</h2>
             <div 
