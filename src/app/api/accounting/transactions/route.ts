@@ -3,6 +3,8 @@ import { supabase } from '@/lib/supabase';
 import { syncTransactionsToSheet } from '@/lib/googleSheets';
 import { RawTransaction } from '@/lib/accounting/types';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   try {
     const { transactions } = await req.json() as { transactions: (RawTransaction & { category: string | null })[] };

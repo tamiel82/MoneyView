@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getHistoryData } from '@/lib/historyService';
 
+export const dynamic = 'force-dynamic';
 export const revalidate = 60; // Cache for 60 seconds (1 minute)
 
 export async function GET() {
