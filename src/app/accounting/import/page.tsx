@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useMemo } from 'react';
-import { Upload, CheckCircle, Loader2, Save, ExternalLink, FileText, X, Search, Filter, ArrowUpDown } from 'lucide-react';
+import { Upload, CheckCircle, Loader2, Save, ExternalLink, FileText, X as XIcon, Search, Filter, ArrowUpDown, Pencil, Trash2, Check } from 'lucide-react';
 import { RawTransaction } from '@/lib/accounting/types';
 import { useRouter } from 'next/navigation';
 
@@ -11,7 +11,6 @@ export default function ImportPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // Use a custom type that includes an id for safe updates after filtering/sorting
   type TxItem = RawTransaction & { id: string; category: string };
   const [transactions, setTransactions] = useState<TxItem[]>([]);
   
@@ -21,7 +20,12 @@ export default function ImportPage() {
   // Sorting and Filtering State
   const [filterText, setFilterText] = useState('');
   const [showUnclassified, setShowUnclassified] = useState(false);
+  const [showUnmatchedBusiness, setShowUnmatchedBusiness] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc'|'desc' } | null>(null);
+
+  // Edit State
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<Partial<TxItem>>({});
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
@@ -102,20 +106,14 @@ export default function ImportPage() {
       // Reset filters on new upload
       setFilterText('');
       setShowUnclassified(false);
+      setShowUnmatchedBusiness(false);
       setSortConfig(null);
+      setEditingId(null);
     } catch (err: any) {
       setError(err.message);
     } finally {
       setIsUploading(false);
     }
-  };
-
-  const handleCategoryChange = (id: string, newCategory: string) => {
-    setTransactions(prev => prev.map(tx => tx.id === id ? { ...tx, category: newCategory } : tx));
-  };
-
-  const handleTypeChange = (id: string, newType: 'INCOME' | 'EXPENSE') => {
-    setTransactions(prev => prev.map(tx => tx.id === id ? { ...tx, type: newType } : tx));
   };
 
   const handleSort = (key: string) => {
@@ -124,6 +122,29 @@ export default function ImportPage() {
       direction = 'desc';
     }
     setSortConfig({ key, direction });
+  };
+
+  const handleEditClick = (tx: TxItem) => {
+    setEditingId(tx.id);
+    setEditForm({ ...tx });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditForm({});
+  };
+
+  const handleSaveEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!editingId) return;
+    setTransactions(prev => prev.map(tx => tx.id === editingId ? { ...tx, ...editForm } as TxItem : tx));
+    setEditingId(null);
+  };
+
+  const handleDelete = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm('목록에서 삭제하시겠습니까? (DB에는 영향이 없습니다)')) return;
+    setTransactions(prev => prev.filter(tx => tx.id !== id));
   };
 
   const handleSaveToLedger = async () => {
@@ -152,6 +173,10 @@ export default function ImportPage() {
 
     if (showUnclassified) {
       result = result.filter(tx => !tx.category || tx.category === '미분류');
+    }
+
+    if (showUnmatchedBusiness) {
+      result = result.filter(tx => tx.category === '국내구매' && !tx.businessNum);
     }
 
     if (filterText) {
@@ -184,10 +209,13 @@ export default function ImportPage() {
     }
 
     return result;
-  }, [transactions, filterText, showUnclassified, sortConfig]);
+  }, [transactions, filterText, showUnclassified, showUnmatchedBusiness, sortConfig]);
+
+  const EXPENSE_CATEGORIES = ['국내구매', '사업세금', '기타경비', '음식', '물건', '몸', '취미', '경험', '관계', '기타', '관리비', '통신비', '교통비', '세금', '대출', '보험', '청약'];
+  const INCOME_CATEGORIES = ['사업소득', '기타'];
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
+    <div className="p-8 max-w-7xl mx-auto">
       <h1 className="text-3xl font-bold mb-2 text-foreground">데이터 업로드</h1>
       <p className="text-muted-foreground mb-6">은행이나 카드사의 엑셀 거래내역을 업로드하여 자동으로 분류합니다.</p>
 
@@ -237,7 +265,7 @@ export default function ImportPage() {
                       <FileText size={16} className="text-primary shrink-0" />
                       <span className="truncate text-foreground">{f.name}</span>
                     </div>
-                    <button onClick={(e) => { e.stopPropagation(); removeFile(i); }} className="text-muted-foreground hover:text-red-400"><X size={16} /></button>
+                    <button onClick={(e) => { e.stopPropagation(); removeFile(i); }} className="text-muted-foreground hover:text-red-400"><XIcon size={16} /></button>
                   </div>
                 ))}
               </div>
@@ -287,7 +315,9 @@ export default function ImportPage() {
                 분석 완료 ({files.length}개 파일)
               </h2>
               <p className="text-sm text-muted-foreground mt-1">
-                총 {parsedData.totalRows}건 중 <span className="text-orange-400">{transactions.filter(t => !t.category || t.category === '미분류').length}건 미분류</span>
+                총 <span className="font-medium text-foreground">{parsedData.totalRows}건</span> 중 
+                <span className="text-orange-400 font-medium ml-1">{transactions.filter(t => !t.category || t.category === '미분류').length}건 미분류</span>, 
+                <span className="text-rose-400 font-medium ml-1">{transactions.filter(t => t.category === '국내구매' && !t.businessNum).length}건 사업자 미매칭</span>
               </p>
             </div>
             <div className="flex gap-3">
@@ -313,8 +343,8 @@ export default function ImportPage() {
           </div>
 
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between glass-card p-4 rounded-xl shadow-sm border-white/10">
-            <div className="flex flex-1 w-full gap-4 items-center">
-              <div className="relative flex-1 max-w-sm">
+            <div className="flex flex-1 w-full gap-4 items-center flex-wrap">
+              <div className="relative flex-1 max-w-sm min-w-[200px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
                 <input 
                   type="text" 
@@ -326,86 +356,156 @@ export default function ImportPage() {
               </div>
               <button
                 onClick={() => setShowUnclassified(!showUnclassified)}
-                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border transition-colors ${
+                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${
                   showUnclassified 
                     ? 'bg-orange-500/20 text-orange-400 border-orange-500/50' 
                     : 'bg-white/5 text-muted-foreground border-white/10 hover:bg-white/10'
                 }`}
               >
-                <Filter size={16} />
-                미분류만 보기
+                <Filter size={14} />
+                미분류 필터링
+              </button>
+              <button
+                onClick={() => setShowUnmatchedBusiness(!showUnmatchedBusiness)}
+                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${
+                  showUnmatchedBusiness 
+                    ? 'bg-rose-500/20 text-rose-400 border-rose-500/50' 
+                    : 'bg-white/5 text-muted-foreground border-white/10 hover:bg-white/10'
+                }`}
+              >
+                <Filter size={14} />
+                사업자 미매칭 필터링
               </button>
             </div>
-            <div className="text-sm text-muted-foreground">
-              검색 결과: <span className="font-medium text-white">{filteredAndSortedTransactions.length}</span>건
+            <div className="text-sm text-muted-foreground shrink-0">
+              목록: <span className="font-medium text-white">{filteredAndSortedTransactions.length}</span>건
             </div>
           </div>
 
-          <div className="glass-card shadow-sm rounded-xl border-white/10 overflow-hidden">
+          <div className="glass-card shadow-sm rounded-xl border-white/10 overflow-hidden relative">
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
-                <thead className="bg-black/40 text-muted-foreground border-b border-white/10">
+                <thead className="bg-black/40 text-muted-foreground border-b border-white/10 sticky top-0">
                   <tr>
-                    <th className="px-4 py-3 font-medium cursor-pointer hover:text-white" onClick={() => handleSort('date')}>
+                    <th className="px-3 py-3 font-medium cursor-pointer hover:text-white" onClick={() => handleSort('date')}>
                       <div className="flex items-center gap-1">거래일 <ArrowUpDown size={12}/></div>
                     </th>
-                    <th className="px-4 py-3 font-medium cursor-pointer hover:text-white" onClick={() => handleSort('content')}>
-                      <div className="flex items-center gap-1">내용(가맹점) <ArrowUpDown size={12}/></div>
+                    <th className="px-3 py-3 font-medium cursor-pointer hover:text-white" onClick={() => handleSort('type')}>
+                      <div className="flex items-center gap-1">유형 <ArrowUpDown size={12}/></div>
                     </th>
-                    <th className="px-4 py-3 font-medium text-right cursor-pointer hover:text-white" onClick={() => handleSort('amount')}>
-                      <div className="flex items-center justify-end gap-1">금액 <ArrowUpDown size={12}/></div>
+                    <th className="px-3 py-3 font-medium cursor-pointer hover:text-white" onClick={() => handleSort('category')}>
+                      <div className="flex items-center gap-1">분류 <ArrowUpDown size={12}/></div>
                     </th>
-                    <th className="px-4 py-3 font-medium cursor-pointer hover:text-white" onClick={() => handleSort('paymentMethod')}>
-                      <div className="flex items-center gap-1">결제수단 <ArrowUpDown size={12}/></div>
+                    <th className="px-3 py-3 font-medium cursor-pointer hover:text-white" onClick={() => handleSort('content')}>
+                      <div className="flex items-center gap-1">내용 <ArrowUpDown size={12}/></div>
                     </th>
-                    <th className="px-4 py-3 font-medium cursor-pointer hover:text-white" onClick={() => handleSort('merchant')}>
+                    <th className="px-3 py-3 font-medium cursor-pointer hover:text-white" onClick={() => handleSort('merchant')}>
                       <div className="flex items-center gap-1">매출처 <ArrowUpDown size={12}/></div>
                     </th>
-                    <th className="px-4 py-3 font-medium cursor-pointer hover:text-white" onClick={() => handleSort('orderNo')}>
+                    <th className="px-3 py-3 font-medium text-right cursor-pointer hover:text-white" onClick={() => handleSort('amount')}>
+                      <div className="flex items-center justify-end gap-1">금액 <ArrowUpDown size={12}/></div>
+                    </th>
+                    <th className="px-3 py-3 font-medium cursor-pointer hover:text-white" onClick={() => handleSort('paymentMethod')}>
+                      <div className="flex items-center gap-1">결제수단 <ArrowUpDown size={12}/></div>
+                    </th>
+                    <th className="px-3 py-3 font-medium cursor-pointer hover:text-white" onClick={() => handleSort('businessNum')}>
+                      <div className="flex items-center gap-1">사업자 <ArrowUpDown size={12}/></div>
+                    </th>
+                    <th className="px-3 py-3 font-medium cursor-pointer hover:text-white" onClick={() => handleSort('orderNo')}>
                       <div className="flex items-center gap-1">주문번호 <ArrowUpDown size={12}/></div>
                     </th>
-                    <th className="px-4 py-3 font-medium">사업자</th>
-                    <th className="px-4 py-3 font-medium">유형</th>
-                    <th className="px-4 py-3 font-medium cursor-pointer hover:text-white" onClick={() => handleSort('category')}>
-                      <div className="flex items-center gap-1">분류 (수정가능) <ArrowUpDown size={12}/></div>
-                    </th>
+                    <th className="px-3 py-3 font-medium text-center w-20">관리</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  {filteredAndSortedTransactions.map((tx) => (
-                    <tr key={tx.id} className={`hover:bg-white/5 transition-colors ${!tx.category || tx.category === '미분류' ? 'bg-orange-500/10' : ''}`}>
-                      <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">{tx.date}</td>
-                      <td className="px-4 py-3 max-w-[200px] truncate text-foreground" title={tx.content || ''}>{tx.content}</td>
-                      <td className="px-4 py-3 text-right font-medium text-foreground">{tx.amount.toLocaleString()}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{tx.paymentMethod}</td>
-                      <td className="px-4 py-3 max-w-[150px] truncate text-muted-foreground" title={tx.merchant || ''}>{tx.merchant || '-'}</td>
-                      <td className="px-4 py-3 text-muted-foreground text-xs">{tx.orderNo || '-'}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{tx.businessNum || '-'}</td>
-                      <td className="px-4 py-3">
-                        <select 
-                          value={tx.type}
-                          onChange={(e) => handleTypeChange(tx.id, e.target.value as 'INCOME' | 'EXPENSE')}
-                          className={`text-xs px-2 py-1 rounded-md border-0 font-medium cursor-pointer ${
-                            tx.type === 'INCOME' ? 'bg-blue-500/20 text-blue-400' : 'bg-rose-500/20 text-rose-400'
-                          }`}
-                        >
-                          <option value="EXPENSE" className="bg-slate-900 text-white">지출</option>
-                          <option value="INCOME" className="bg-slate-900 text-white">수입</option>
-                        </select>
-                      </td>
-                      <td className="px-4 py-3">
-                        <input
-                          type="text"
-                          value={tx.category || ''}
-                          onChange={(e) => handleCategoryChange(tx.id, e.target.value)}
-                          placeholder="미분류"
-                          className={`w-32 bg-transparent border-b focus:border-primary focus:ring-0 px-1 py-1 text-sm ${
-                            !tx.category || tx.category === '미분류' ? 'border-orange-500/50 text-orange-400' : 'border-white/10 text-foreground'
-                          }`}
-                        />
-                      </td>
-                    </tr>
-                  ))}
+                  {filteredAndSortedTransactions.map((tx) => {
+                    const isEditing = editingId === tx.id;
+                    const isUnclassified = !tx.category || tx.category === '미분류';
+                    const isUnmatchedBusiness = tx.category === '국내구매' && !tx.businessNum;
+
+                    if (isEditing) {
+                      return (
+                        <tr key={tx.id} className="bg-white/5 transition-colors shadow-inner border-y border-primary/20">
+                          <td className="px-2 py-2">
+                            <input type="date" value={editForm.date || ''} onChange={e => setEditForm({...editForm, date: e.target.value})} className="w-full min-w-[110px] bg-black/20 border border-white/10 rounded px-2 py-1.5 text-foreground text-xs" />
+                          </td>
+                          <td className="px-2 py-2">
+                            <select value={editForm.type || 'EXPENSE'} onChange={e => setEditForm({...editForm, type: e.target.value as 'INCOME'|'EXPENSE', category: ''})} className="w-full bg-black/20 border border-white/10 rounded px-1 py-1.5 text-foreground text-xs">
+                              <option value="EXPENSE">지출</option>
+                              <option value="INCOME">수입</option>
+                            </select>
+                          </td>
+                          <td className="px-2 py-2">
+                            <select value={editForm.category || ''} onChange={e => setEditForm({...editForm, category: e.target.value})} className="w-full min-w-[80px] bg-black/20 border border-white/10 rounded px-1 py-1.5 text-foreground text-xs">
+                              <option value="">(선택)</option>
+                              {(editForm.type === 'INCOME' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES).map(cat => (
+                                <option key={cat} value={cat}>{cat}</option>
+                              ))}
+                            </select>
+                          </td>
+                          <td className="px-2 py-2">
+                            <input type="text" value={editForm.content || ''} onChange={e => setEditForm({...editForm, content: e.target.value})} className="w-full bg-black/20 border border-white/10 rounded px-2 py-1.5 text-foreground text-xs" />
+                          </td>
+                          <td className="px-2 py-2">
+                            <input type="text" value={editForm.merchant || ''} onChange={e => setEditForm({...editForm, merchant: e.target.value})} className="w-full bg-black/20 border border-white/10 rounded px-2 py-1.5 text-foreground text-xs" />
+                          </td>
+                          <td className="px-2 py-2">
+                            <input type="number" value={editForm.amount || 0} onChange={e => setEditForm({...editForm, amount: Number(e.target.value)})} className="w-full bg-black/20 border border-white/10 rounded px-2 py-1.5 text-foreground text-xs text-right min-w-[80px]" />
+                          </td>
+                          <td className="px-2 py-2">
+                            <input type="text" value={editForm.paymentMethod || ''} onChange={e => setEditForm({...editForm, paymentMethod: e.target.value})} className="w-full bg-black/20 border border-white/10 rounded px-2 py-1.5 text-foreground text-xs min-w-[80px]" />
+                          </td>
+                          <td className="px-2 py-2">
+                            <select value={editForm.businessNum || ''} onChange={e => setEditForm({...editForm, businessNum: e.target.value})} className="w-full bg-black/20 border border-white/10 rounded px-1 py-1.5 text-foreground text-xs min-w-[70px]">
+                              <option value="">(없음)</option>
+                              <option value="더엠제이">더엠제이</option>
+                              <option value="동주">동주</option>
+                            </select>
+                          </td>
+                          <td className="px-2 py-2">
+                            <input type="text" value={editForm.orderNo || ''} onChange={e => setEditForm({...editForm, orderNo: e.target.value})} className="w-full bg-black/20 border border-white/10 rounded px-2 py-1.5 text-foreground text-xs" />
+                          </td>
+                          <td className="px-2 py-2 text-center">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button onClick={handleSaveEdit} className="p-1.5 text-emerald-400 bg-emerald-400/10 hover:bg-emerald-400/20 rounded" title="저장"><Check className="w-4 h-4" /></button>
+                              <button onClick={(e) => { e.stopPropagation(); handleCancelEdit(); }} className="p-1.5 text-slate-400 bg-white/5 hover:bg-white/10 rounded" title="취소"><XIcon className="w-4 h-4" /></button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    }
+
+                    return (
+                      <tr 
+                        key={tx.id} 
+                        onClick={() => handleEditClick(tx)}
+                        className={`hover:bg-white/5 transition-colors cursor-pointer group ${
+                          isUnclassified ? 'bg-orange-500/10' : ''
+                        } ${isUnmatchedBusiness ? 'bg-rose-500/10' : ''}`}
+                      >
+                        <td className="px-3 py-3 whitespace-nowrap text-muted-foreground">{tx.date}</td>
+                        <td className="px-3 py-3">
+                          <span className={`px-2 py-1 rounded text-[10px] font-semibold ${tx.type === 'INCOME' ? 'bg-blue-500/20 text-blue-400' : 'bg-rose-500/20 text-rose-400'}`}>
+                            {tx.type === 'INCOME' ? '수입' : '지출'}
+                          </span>
+                        </td>
+                        <td className={`px-3 py-3 font-medium ${isUnclassified ? 'text-orange-400' : 'text-foreground'}`}>{tx.category || '-'}</td>
+                        <td className="px-3 py-3 max-w-[150px] truncate text-foreground" title={tx.content || ''}>{tx.content}</td>
+                        <td className="px-3 py-3 max-w-[150px] truncate text-muted-foreground" title={tx.merchant || ''}>{tx.merchant || '-'}</td>
+                        <td className="px-3 py-3 text-right font-medium text-foreground">{tx.amount.toLocaleString()}</td>
+                        <td className="px-3 py-3 text-muted-foreground">{tx.paymentMethod}</td>
+                        <td className={`px-3 py-3 whitespace-nowrap ${isUnmatchedBusiness ? 'text-rose-400 font-medium' : 'text-muted-foreground'}`}>{tx.businessNum || '-'}</td>
+                        <td className="px-3 py-3 max-w-[100px] truncate text-muted-foreground text-xs" title={tx.orderNo || ''}>{tx.orderNo || '-'}</td>
+                        <td className="px-3 py-3 text-center">
+                          <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={(e) => handleDelete(tx.id, e)} className="p-1.5 text-rose-400 hover:bg-rose-400/20 rounded transition-colors" title="삭제">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
