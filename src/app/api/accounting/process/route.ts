@@ -62,13 +62,13 @@ export async function POST(req: Request) {
       await conn.end();
     } catch (dbError: any) {
       console.warn("MySQL Connection Failed, proceeding without business expense matching:", dbError.message);
-      // We don't fail entirely, just warn.
     }
 
     const matchBusinessExpense = (dateStr: string, amountNum: number) => {
-      let res = { 소비분류: '국내구매', 사업자: '', 매출처: '', 주문번호: '' };
+      let res = { 소비분류: '국내구매', 사업자: '', 매출처: '', 주문번호: '', matched: false };
       const matches = sellDf.filter(o => o.구매일 === dateStr && o.구매합계_num === Math.abs(amountNum));
       if (matches.length > 0) {
+        res.matched = true;
         const order = matches[0];
         const code = String(order.상품코드).split('C')[0];
         if (code) {
@@ -82,6 +82,39 @@ export async function POST(req: Request) {
         res.주문번호 = String(order.주문번호 || '');
       }
       return res;
+    };
+
+    const applyBusinessAndCoupangLogic = (결제일: string, 지출내용: string, 지출금액: number, cat: any) => {
+      let 소비분류 = cat ? cat.category : '';
+      let 사업자 = '', 매출처 = '', 주문번호 = '';
+      let isCoupangMatchedInSellDf = false;
+
+      if (소비분류 === '사업지출') {
+        const matched = matchBusinessExpense(결제일, 지출금액);
+        소비분류 = matched.소비분류; 사업자 = matched.사업자; 매출처 = matched.매출처; 주문번호 = matched.주문번호;
+        if (matched.matched && cat && (cat.merchant === '쿠팡' || 지출내용.includes('쿠팡'))) {
+          isCoupangMatchedInSellDf = true;
+        }
+      }
+
+      const isCoupangMerchant = 지출내용 === '쿠팡' || 지출내용.includes('쿠팡');
+
+      if (isCoupangMerchant && !isCoupangMatchedInSellDf) {
+        const stockMatched = stockDf.find(s => String(s.날짜) === 결제일 && String(s.구매처) === '쿠팡' && numOnly(s.금액) === Math.abs(지출금액));
+        if (stockMatched) {
+          소비분류 = '국내구매';
+          사업자 = String(stockMatched.사업자);
+          매출처 = '';
+          주문번호 = '';
+        } else {
+          소비분류 = ''; // 미분류 처리
+          사업자 = '';
+          매출처 = '';
+          주문번호 = '';
+        }
+      }
+
+      return { 소비분류, 사업자, 매출처, 주문번호 };
     };
 
     const transactions: any[] = [];
@@ -104,15 +137,10 @@ export async function POST(req: Request) {
             const 결제일 = String(row['이용일']).trim();
             const 지출내용 = String(row['이용하신곳']).trim();
             const 결제수단 = '동민_' + (String(row['카드번호']).includes('2081') ? 'KB가온' : 'KB올쇼핑');
+            const 비고 = '';
             
             const cat = getCategory(지출내용);
-            let 소비분류 = cat ? cat.category : '';
-            let 사업자 = '', 매출처 = '', 주문번호 = '', 비고 = '';
-
-            if (소비분류 === '사업지출') {
-              const matched = matchBusinessExpense(결제일, 지출금액);
-              소비분류 = matched.소비분류; 사업자 = matched.사업자; 매출처 = matched.매출처; 주문번호 = matched.주문번호;
-            }
+            const { 소비분류, 사업자, 매출처, 주문번호 } = applyBusinessAndCoupangLogic(결제일, 지출내용, 지출금액, cat);
 
             transactions.push({ 거래일: 결제일, 지출내용, 지출금액, 소비분류, 매출처, 주문번호, 결제수단, 사업자, 비고 });
           }
@@ -126,7 +154,7 @@ export async function POST(req: Request) {
           
           if (rows.length > 3) {
             const headers = $(rows[2]).find('th').map((_, el) => $(el).text().trim()).get();
-            for (let i = 3; i < rows.length - 1; i++) { // skip last summary row
+            for (let i = 3; i < rows.length - 1; i++) {
               const tds = $(rows[i]).find('td').map((_, el) => $(el).text().trim()).get();
               if (tds.length === headers.length) {
                 const rowObj: any = {};
@@ -143,15 +171,10 @@ export async function POST(req: Request) {
 
                 const 지출내용 = String(rowObj['가맹점명']).trim();
                 const 결제수단 = `${owner}_${rowObj['카드명(카드번호 뒤 4자리)'] || '현대'}`;
+                const 비고 = '';
 
                 const cat = getCategory(지출내용);
-                let 소비분류 = cat ? cat.category : '';
-                let 사업자 = '', 매출처 = '', 주문번호 = '', 비고 = '';
-
-                if (소비분류 === '사업지출') {
-                  const matched = matchBusinessExpense(결제일, 지출금액);
-                  소비분류 = matched.소비분류; 사업자 = matched.사업자; 매출처 = matched.매출처; 주문번호 = matched.주문번호;
-                }
+                const { 소비분류, 사업자, 매출처, 주문번호 } = applyBusinessAndCoupangLogic(결제일, 지출내용, 지출금액, cat);
 
                 transactions.push({ 거래일: 결제일, 지출내용, 지출금액, 소비분류, 매출처, 주문번호, 결제수단, 사업자, 비고 });
               }
@@ -172,6 +195,7 @@ export async function POST(req: Request) {
             const 결제일 = String(row['거래일']).replace(/\./g, '-');
             const 지출내용 = String(row['가맹점명']).trim();
             const cardNum = numOnly(row['이용카드\n(뒤4자리)']);
+            const 비고 = '';
             
             let cardName = '신한';
             if (owner === '동민') {
@@ -186,25 +210,7 @@ export async function POST(req: Request) {
             const 결제수단 = `${owner}_${cardName}`;
 
             const cat = getCategory(지출내용);
-            let 소비분류 = cat ? cat.category : '';
-            let 사업자 = '', 매출처 = '', 주문번호 = '', 비고 = '';
-
-            const 쿠팡지출 = 지출내용 === '쿠팡' || (cat && cat.merchant === '쿠팡');
-
-            if (소비분류 === '사업지출') {
-              const matched = matchBusinessExpense(결제일, 지출금액);
-              소비분류 = matched.소비분류; 사업자 = matched.사업자; 매출처 = matched.매출처; 주문번호 = matched.주문번호;
-            }
-
-            if (쿠팡지출) {
-              const stockMatched = stockDf.find(s => String(s.날짜) === 결제일 && String(s.구매처) === '쿠팡' && numOnly(s.금액) === 지출금액);
-              if (stockMatched) {
-                소비분류 = '국내구매';
-                사업자 = String(stockMatched.사업자);
-                매출처 = '';
-                주문번호 = '';
-              }
-            }
+            const { 소비분류, 사업자, 매출처, 주문번호 } = applyBusinessAndCoupangLogic(결제일, 지출내용, 지출금액, cat);
 
             transactions.push({ 거래일: 결제일, 지출내용, 지출금액, 소비분류, 매출처, 주문번호, 결제수단, 사업자, 비고 });
           }
@@ -230,27 +236,22 @@ export async function POST(req: Request) {
             const 결제수단 = `${owner}_${isMatong ? '마통' : '우리'}`;
 
             const cat = getCategory(기재내용);
-            let 소비분류 = cat ? cat.category : '';
-            let 사업자 = '', 매출처 = '', 주문번호 = '', 비고 = '';
-            let 지출금액 = 0;
+            let 비고 = '';
 
             if (출금금액 > 0) {
-              지출금액 = 출금금액;
               비고 = '출금';
-              if (소비분류 === '사업지출') {
-                const matched = matchBusinessExpense(결제일, 지출금액);
-                소비분류 = matched.소비분류; 사업자 = matched.사업자; 매출처 = matched.매출처; 주문번호 = matched.주문번호;
-              }
+              const { 소비분류, 사업자, 매출처, 주문번호 } = applyBusinessAndCoupangLogic(결제일, 기재내용, 출금금액, cat);
+              transactions.push({ 거래일: 결제일, 지출내용: 기재내용, 지출금액: 출금금액, 소비분류, 매출처, 주문번호, 결제수단, 사업자, 비고 });
             } else {
-              지출금액 = 입금금액;
               비고 = '입금';
+              let 소비분류 = cat ? cat.category : '';
+              let 사업자 = '';
               if (cat && cat.category === '사업지출') {
                 소비분류 = '사업소득';
                 사업자 = owner === '현주' ? '더엠제이' : '동주';
               }
+              transactions.push({ 거래일: 결제일, 지출내용: 기재내용, 지출금액: 입금금액, 소비분류, 매출처: '', 주문번호: '', 결제수단, 사업자, 비고 });
             }
-
-            transactions.push({ 거래일: 결제일, 지출내용: 기재내용, 지출금액, 소비분류, 매출처, 주문번호, 결제수단, 사업자, 비고 });
           }
         }
 
@@ -271,27 +272,22 @@ export async function POST(req: Request) {
             const 결제수단 = `${owner}_하나`;
 
             const cat = getCategory(지출내용);
-            let 소비분류 = cat ? cat.category : '';
-            let 사업자 = '', 매출처 = '', 주문번호 = '', 비고 = '';
-            let 지출금액 = 0;
+            let 비고 = '';
 
             if (출금액 > 0) {
-              지출금액 = 출금액;
               비고 = '출금';
-              if (소비분류 === '사업지출') {
-                const matched = matchBusinessExpense(결제일, 지출금액);
-                소비분류 = matched.소비분류; 사업자 = matched.사업자; 매출처 = matched.매출처; 주문번호 = matched.주문번호;
-              }
+              const { 소비분류, 사업자, 매출처, 주문번호 } = applyBusinessAndCoupangLogic(결제일, 지출내용, 출금액, cat);
+              transactions.push({ 거래일: 결제일, 지출내용, 지출금액: 출금액, 소비분류, 매출처, 주문번호, 결제수단, 사업자, 비고 });
             } else {
-              지출금액 = 입금액;
               비고 = '입금';
+              let 소비분류 = cat ? cat.category : '';
+              let 사업자 = '';
               if (cat && cat.category === '사업지출') {
                 소비분류 = '사업소득';
                 사업자 = '더엠제이';
               }
+              transactions.push({ 거래일: 결제일, 지출내용, 지출금액: 입금액, 소비분류, 매출처: '', 주문번호: '', 결제수단, 사업자, 비고 });
             }
-
-            transactions.push({ 거래일: 결제일, 지출내용, 지출금액, 소비분류, 매출처, 주문번호, 결제수단, 사업자, 비고 });
           }
         }
 
@@ -319,25 +315,23 @@ export async function POST(req: Request) {
             const 결제수단 = `${owner}_토스`;
 
             const cat = getCategory(지출내용);
-            let 소비분류 = cat ? cat.category : '';
-            let 사업자 = '', 매출처 = '', 주문번호 = '', 비고 = '';
-            let 지출금액 = Math.abs(금액);
+            let 비고 = '';
 
             if (금액 < 0) {
               비고 = '출금';
-              if (소비분류 === '사업지출') {
-                const matched = matchBusinessExpense(결제일, 지출금액);
-                소비분류 = matched.소비분류; 사업자 = matched.사업자; 매출처 = matched.매출처; 주문번호 = matched.주문번호;
-              }
+              const 출금액 = Math.abs(금액);
+              const { 소비분류, 사업자, 매출처, 주문번호 } = applyBusinessAndCoupangLogic(결제일, 지출내용, 출금액, cat);
+              transactions.push({ 거래일: 결제일, 지출내용, 지출금액: 출금액, 소비분류, 매출처, 주문번호, 결제수단, 사업자, 비고 });
             } else {
               비고 = '입금';
+              let 소비분류 = cat ? cat.category : '';
+              let 사업자 = '';
               if (cat && cat.category === '사업지출') {
                 소비분류 = '사업소득';
                 사업자 = owner === '동민' ? '동주' : '더엠제이';
               }
+              transactions.push({ 거래일: 결제일, 지출내용, 지출금액: 금액, 소비분류, 매출처: '', 주문번호: '', 결제수단, 사업자, 비고 });
             }
-
-            transactions.push({ 거래일: 결제일, 지출내용, 지출금액, 소비분류, 매출처, 주문번호, 결제수단, 사업자, 비고 });
           }
         }
 
