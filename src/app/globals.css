@@ -37,6 +37,11 @@ body {
   @apply antialiased min-h-screen selection:bg-primary/30;
 }
 
+select option {
+  background-color: var(--card);
+  color: var(--foreground);
+}
+
 /* Glassmorphism Utilities */
 @layer utilities {
   .glass {

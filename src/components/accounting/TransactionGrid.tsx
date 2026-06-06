@@ -99,7 +99,23 @@ export default function TransactionGrid({ transactions, onRefresh, monthStr }: T
     return data;
   }, [transactions, sortConfig, filters]);
 
-  const handleEditClick = (t: Transaction) => {
+  const handleEditClick = async (t: Transaction) => {
+    if (editingId && editingId !== t.id) {
+      // Auto-save previous editing row
+      try {
+        const res = await fetch('/api/accounting/transactions', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(editForm),
+        });
+        if (!res.ok) throw new Error('수정 실패');
+        onRefresh();
+      } catch (err: any) {
+        alert('이전 항목 자동 저장 실패: ' + err.message);
+        return;
+      }
+    }
+    
     setEditingId(t.id);
     setEditForm({
       ...t,

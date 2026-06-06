@@ -126,6 +126,10 @@ export default function ImportPage() {
   };
 
   const handleEditClick = (tx: TxItem) => {
+    if (editingId && editingId !== tx.id) {
+      // Auto-save previous editing row
+      setTransactions(prev => prev.map(t => t.id === editingId ? { ...t, ...editForm } as TxItem : t));
+    }
     setEditingId(tx.id);
     setEditForm({ ...tx });
   };
