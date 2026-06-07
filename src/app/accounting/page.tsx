@@ -355,7 +355,31 @@ export default function AccountingDashboard() {
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-4 text-foreground">
           <button onClick={handlePrevMonth} className="p-2 hover:bg-white/10 rounded-full transition-colors"><ChevronLeft className="text-muted-foreground" /></button>
-          <h1 className="text-3xl font-bold">{currentDate.getFullYear()}년 {currentDate.getMonth() + 1}월</h1>
+          
+          <div className="relative flex items-center group cursor-pointer">
+            <h1 className="text-3xl font-bold group-hover:text-primary transition-colors">
+              {currentDate.getFullYear()}년 {currentDate.getMonth() + 1}월
+            </h1>
+            <input 
+              type="month"
+              value={`${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`}
+              onChange={(e) => {
+                if (e.target.value) {
+                  setCurrentDate(new Date(e.target.value + '-01'));
+                }
+              }}
+              onClick={(e) => {
+                try {
+                  if ('showPicker' in HTMLInputElement.prototype) {
+                    e.currentTarget.showPicker();
+                  }
+                } catch (err) {}
+              }}
+              className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+              title="원하는 연/월 선택"
+            />
+          </div>
+
           <button onClick={handleNextMonth} className="p-2 hover:bg-white/10 rounded-full transition-colors"><ChevronRight className="text-muted-foreground" /></button>
         </div>
         
