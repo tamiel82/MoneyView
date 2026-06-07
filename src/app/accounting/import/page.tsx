@@ -152,6 +152,23 @@ export default function ImportPage() {
     setTransactions(prev => prev.filter(tx => tx.id !== id));
   };
 
+  const handleFillBusiness = () => {
+    let filledCount = 0;
+    setTransactions(prev => prev.map(tx => {
+      if (tx.category === '국내구매' && !tx.businessNum) {
+        if (tx.paymentMethod?.startsWith('현주')) {
+          filledCount++;
+          return { ...tx, businessNum: '더엠제이' };
+        } else if (tx.paymentMethod?.startsWith('동민')) {
+          filledCount++;
+          return { ...tx, businessNum: '동주' };
+        }
+      }
+      return tx;
+    }));
+    alert(`총 ${filledCount}건의 사업자가 자동으로 채워졌습니다.`);
+  };
+
   const handleSaveToLedger = async () => {
     setIsSaving(true);
     try {
@@ -330,7 +347,13 @@ export default function ImportPage() {
                 <span className="text-rose-400 font-medium ml-1">{transactions.filter(t => t.category === '국내구매' && !t.businessNum).length}건 사업자 미매칭</span>
               </p>
             </div>
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={handleFillBusiness}
+                className="px-4 py-2 text-sm font-medium text-blue-400 bg-blue-400/10 border border-blue-400/20 rounded-lg hover:bg-blue-400/20 transition-colors"
+              >
+                사업자 자동채우기
+              </button>
               <button
                 onClick={() => {
                   setFiles([]);
