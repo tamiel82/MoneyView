@@ -348,12 +348,7 @@ export default function ImportPage() {
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
-              <button
-                onClick={handleFillBusiness}
-                className="px-4 py-2 text-sm font-medium text-blue-400 bg-blue-400/10 border border-blue-400/20 rounded-lg hover:bg-blue-400/20 transition-colors"
-              >
-                사업자 자동채우기
-              </button>
+
               <button
                 onClick={() => {
                   setFiles([]);
@@ -408,6 +403,12 @@ export default function ImportPage() {
               >
                 <Filter size={14} />
                 사업자 미매칭 필터링
+              </button>
+              <button
+                onClick={handleFillBusiness}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-blue-400 bg-blue-400/10 border border-blue-400/20 rounded-lg hover:bg-blue-400/20 transition-colors"
+              >
+                사업자 자동채우기
               </button>
             </div>
             <div className="text-sm text-muted-foreground shrink-0">
