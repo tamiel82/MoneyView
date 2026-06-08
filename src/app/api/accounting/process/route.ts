@@ -234,10 +234,11 @@ export async function POST(req: Request) {
             const 입금금액 = numOnly(row['맡기신금액']);
             if (출금금액 === 0 && 입금금액 === 0) continue;
 
-            const 기재내용 = String(row['기재내용']).trim();
-            const 적요 = String(row['적요']).trim();
-
-            if (기재내용.includes('쿠팡') && (적요 === '체크신한' || 적요 === '오픈뱅킹')) continue;
+            const 기재내용 = String(row['기재내용'] || row['내용'] || '').trim();
+            const 적요 = String(row['적요'] || '').trim();
+            
+            const rowStr = Object.values(row).map(v => String(v)).join(' ');
+            if (rowStr.includes('쿠팡') && (rowStr.includes('체크신한') || rowStr.includes('오픈뱅킹'))) continue;
 
             const 결제일 = String(row['거래일시']).split(' ')[0].replace(/\./g, '-');
             const 결제수단 = `${owner}_${isMatong ? '마통' : '우리'}`;
