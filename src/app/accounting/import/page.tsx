@@ -154,7 +154,7 @@ export default function ImportPage() {
 
   const handleFillBusiness = () => {
     let filledCount = 0;
-    setTransactions(prev => prev.map(tx => {
+    const newTransactions = transactions.map(tx => {
       if (tx.category === '국내구매' && !tx.businessNum) {
         if (tx.paymentMethod?.startsWith('현주')) {
           filledCount++;
@@ -165,7 +165,11 @@ export default function ImportPage() {
         }
       }
       return tx;
-    }));
+    });
+    
+    if (filledCount > 0) {
+      setTransactions(newTransactions);
+    }
     alert(`총 ${filledCount}건의 사업자가 자동으로 채워졌습니다.`);
   };
 
