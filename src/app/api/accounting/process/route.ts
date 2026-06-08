@@ -89,11 +89,18 @@ export async function POST(req: Request) {
       let 사업자 = '', 매출처 = '', 주문번호 = '';
       let isCoupangMatchedInSellDf = false;
 
-      if (소비분류 === '사업지출') {
+      if (소비분류 === '사업지출' || 소비분류 === '국내구매') {
         const matched = matchBusinessExpense(결제일, 지출금액);
-        소비분류 = matched.소비분류; 사업자 = matched.사업자; 매출처 = matched.매출처; 주문번호 = matched.주문번호;
-        if (matched.matched && cat && (cat.merchant === '쿠팡' || 지출내용.includes('쿠팡'))) {
-          isCoupangMatchedInSellDf = true;
+        if (matched.matched) {
+          소비분류 = matched.소비분류; 
+          사업자 = matched.사업자; 
+          매출처 = matched.매출처; 
+          주문번호 = matched.주문번호;
+          if (cat && (cat.merchant === '쿠팡' || 지출내용.includes('쿠팡'))) {
+            isCoupangMatchedInSellDf = true;
+          }
+        } else if (소비분류 === '사업지출') {
+          소비분류 = '국내구매';
         }
       }
 
