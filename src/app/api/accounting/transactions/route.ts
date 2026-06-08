@@ -141,3 +141,27 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: '삭제 중 오류: ' + error.message }, { status: 500 });
   }
 }
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const { ids, updates } = await req.json();
+    
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return NextResponse.json({ error: 'IDs are required for bulk update' }, { status: 400 });
+    }
+
+    const { error: txError } = await supabase.from('transactions')
+      .update(updates)
+      .in('id', ids);
+
+    if (txError) throw txError;
+
+    // Trigger async sync without awaiting
+    syncTransactionsToSheet();
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error('Bulk Update error:', error);
+    return NextResponse.json({ error: '일괄 수정 중 오류: ' + error.message }, { status: 500 });
+  }
+}

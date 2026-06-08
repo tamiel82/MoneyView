@@ -24,6 +24,11 @@ export default function TransactionGrid({ transactions, onRefresh, monthStr }: T
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<Partial<Transaction>>({});
   
+  // Bulk Edit State
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [bulkEditForm, setBulkEditForm] = useState<{ category?: string; businessNum?: string }>({});
+  const [isBulkEditing, setIsBulkEditing] = useState(false);
+  
   const [isAdding, setIsAdding] = useState(false);
   const [addForm, setAddForm] = useState<Partial<Transaction>>({
     date: monthStr ? `${monthStr}-01` : new Date().toISOString().split('T')[0],
@@ -155,8 +160,45 @@ export default function TransactionGrid({ transactions, onRefresh, monthStr }: T
       });
       if (!res.ok) throw new Error('삭제 실패');
       onRefresh();
+      setSelectedIds(prev => prev.filter(i => i !== id));
     } catch (e: any) {
       alert(e.message);
+    }
+  };
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedIds(processedData.map(t => t.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (e: React.ChangeEvent<HTMLInputElement>, id: number) => {
+    if (e.target.checked) {
+      setSelectedIds(prev => [...prev, id]);
+    } else {
+      setSelectedIds(prev => prev.filter(i => i !== id));
+    }
+  };
+
+  const handleApplyBulkEdit = async () => {
+    if (selectedIds.length === 0) return;
+    setIsBulkEditing(true);
+    try {
+      const res = await fetch('/api/accounting/transactions', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: selectedIds, updates: bulkEditForm }),
+      });
+      if (!res.ok) throw new Error('일괄 수정 실패');
+      setSelectedIds([]);
+      setBulkEditForm({});
+      onRefresh();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setIsBulkEditing(false);
     }
   };
 
@@ -223,6 +265,14 @@ export default function TransactionGrid({ transactions, onRefresh, monthStr }: T
         <table className="w-full text-sm text-left">
           <thead className="bg-black/40 text-muted-foreground sticky top-0 z-10 backdrop-blur-md">
             <tr>
+              <th className="px-3 py-3 font-medium border-b border-white/10 w-10 text-center">
+                <input 
+                  type="checkbox" 
+                  className="rounded border-white/20 bg-black/20" 
+                  checked={processedData.length > 0 && selectedIds.length === processedData.length}
+                  onChange={handleSelectAll}
+                />
+              </th>
               {['date', 'type', 'category', 'content', 'merchant', 'amount', 'paymentMethod', 'businessNum', 'orderNo'].map((k) => {
                 const key = k as keyof Transaction;
                 const labels: Record<string, string> = { 
@@ -255,6 +305,7 @@ export default function TransactionGrid({ transactions, onRefresh, monthStr }: T
           <tbody className="divide-y divide-white/5">
             {isAdding && (
               <tr className="bg-primary/10 transition-colors">
+                <td className="px-2 py-2"></td>
                 <td className="px-2 py-2">
                   <input type="date" value={addForm.date || ''} onChange={e => setAddForm({...addForm, date: e.target.value})} className="w-full bg-black/20 border border-white/10 rounded px-2 py-1 text-foreground text-xs" />
                 </td>
@@ -309,10 +360,12 @@ export default function TransactionGrid({ transactions, onRefresh, monthStr }: T
 
             {processedData.map((tx) => {
               const isEditing = editingId === tx.id;
+              const isSelected = selectedIds.includes(tx.id);
               
               if (isEditing) {
                 return (
                   <tr key={tx.id} className="bg-white/5 transition-colors shadow-inner">
+                    <td className="px-2 py-2"></td>
                     <td className="px-2 py-2">
                       <input type="date" value={editForm.date || ''} onChange={e => setEditForm({...editForm, date: e.target.value})} className="w-full bg-black/20 border border-white/10 rounded px-2 py-1 text-foreground text-xs" />
                     </td>
@@ -367,7 +420,15 @@ export default function TransactionGrid({ transactions, onRefresh, monthStr }: T
               }
 
               return (
-                <tr key={tx.id} onClick={() => handleEditClick(tx)} className="hover:bg-white/5 transition-colors cursor-pointer group">
+                <tr key={tx.id} onClick={() => handleEditClick(tx)} className={`hover:bg-white/5 transition-colors cursor-pointer group ${isSelected ? 'bg-primary/10' : ''}`}>
+                  <td className="px-3 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                    <input 
+                      type="checkbox" 
+                      className="rounded border-white/20 bg-black/20 cursor-pointer" 
+                      checked={isSelected}
+                      onChange={(e) => handleSelectOne(e, tx.id)}
+                    />
+                  </td>
                   <td className="px-3 py-3 whitespace-nowrap text-muted-foreground">{tx.date}</td>
                   <td className="px-3 py-3 text-center">
                     <span className={`px-2 py-1 rounded text-[10px] font-semibold ${tx.type === 'INCOME' ? 'bg-blue-500/20 text-blue-400' : 'bg-rose-500/20 text-rose-400'}`}>
@@ -394,6 +455,60 @@ export default function TransactionGrid({ transactions, onRefresh, monthStr }: T
           </tbody>
         </table>
       </div>
+
+      {/* Floating Bulk Edit Bar */}
+      {selectedIds.length > 0 && (
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-black/90 border border-white/20 shadow-2xl rounded-2xl px-6 py-4 flex items-center gap-6 z-50 backdrop-blur-xl animate-in slide-in-from-bottom-5">
+          <div className="flex items-center gap-2 border-r border-white/10 pr-6">
+            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold">
+              {selectedIds.length}
+            </span>
+            <span className="text-sm font-medium text-white">건 선택됨</span>
+          </div>
+          
+          <div className="flex items-center gap-4">
+            <select 
+              value={bulkEditForm.category || ''} 
+              onChange={e => setBulkEditForm({...bulkEditForm, category: e.target.value})}
+              className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-primary w-32"
+            >
+              <option value="" className="bg-black text-white">분류 변경안함</option>
+              {EXPENSE_CATEGORIES.map(cat => (
+                <option key={cat} value={cat} className="bg-black text-white">{cat}</option>
+              ))}
+              {INCOME_CATEGORIES.map(cat => (
+                <option key={cat} value={cat} className="bg-black text-white">{cat}</option>
+              ))}
+            </select>
+
+            <select 
+              value={bulkEditForm.businessNum || ''} 
+              onChange={e => setBulkEditForm({...bulkEditForm, businessNum: e.target.value})}
+              className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-primary w-32"
+            >
+              <option value="" className="bg-black text-white">사업자 변경안함</option>
+              <option value="더엠제이" className="bg-black text-white">더엠제이</option>
+              <option value="동주" className="bg-black text-white">동주</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2 pl-4 border-l border-white/10">
+            <button 
+              onClick={() => setSelectedIds([])}
+              className="px-4 py-1.5 text-sm font-medium text-slate-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+            >
+              취소
+            </button>
+            <button 
+              onClick={handleApplyBulkEdit}
+              disabled={isBulkEditing || (!bulkEditForm.category && !bulkEditForm.businessNum)}
+              className="px-4 py-1.5 text-sm font-medium text-white bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+            >
+              {isBulkEditing ? '적용 중...' : '일괄 적용'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

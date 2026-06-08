@@ -28,6 +28,10 @@ export default function ImportPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<TxItem>>({});
 
+  // Bulk Edit State
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkEditForm, setBulkEditForm] = useState<{ category?: string; businessNum?: string }>({});
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
@@ -104,12 +108,13 @@ export default function ImportPage() {
         totalRows: mappedTransactions.length,
         unclassifiedRows: mappedTransactions.filter((t: any) => !t.category || t.category === '미분류').length
       });
-      // Reset filters on new upload
       setFilterText('');
       setShowUnclassified(false);
       setShowUnmatchedBusiness(false);
       setSortConfig(null);
       setEditingId(null);
+      setSelectedIds([]);
+      setBulkEditForm({});
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -148,8 +153,44 @@ export default function ImportPage() {
 
   const handleDelete = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm('목록에서 삭제하시겠습니까? (DB에는 영향이 없습니다)')) return;
-    setTransactions(prev => prev.filter(tx => tx.id !== id));
+    if (confirm('정말로 삭제하시겠습니까?')) {
+      setTransactions(prev => prev.filter(t => t.id !== id));
+      setSelectedIds(prev => prev.filter(i => i !== id));
+    }
+  };
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>, filteredData: TxItem[]) => {
+    if (e.target.checked) {
+      setSelectedIds(filteredData.map(t => t.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (e: React.ChangeEvent<HTMLInputElement>, id: string) => {
+    if (e.target.checked) {
+      setSelectedIds(prev => [...prev, id]);
+    } else {
+      setSelectedIds(prev => prev.filter(i => i !== id));
+    }
+  };
+
+  const handleApplyBulkEdit = () => {
+    if (selectedIds.length === 0) return;
+    
+    setTransactions(prev => prev.map(tx => {
+      if (selectedIds.includes(tx.id)) {
+        return {
+          ...tx,
+          ...(bulkEditForm.category !== undefined ? { category: bulkEditForm.category } : {}),
+          ...(bulkEditForm.businessNum !== undefined ? { businessNum: bulkEditForm.businessNum } : {})
+        };
+      }
+      return tx;
+    }));
+    
+    setSelectedIds([]);
+    setBulkEditForm({});
   };
 
   const handleFillBusiness = () => {
@@ -423,8 +464,16 @@ export default function ImportPage() {
           <div className="glass-card shadow-sm rounded-xl border-white/10 overflow-hidden relative">
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
-                <thead className="bg-black/40 text-muted-foreground border-b border-white/10 sticky top-0">
+                <thead className="bg-black/40 text-muted-foreground border-b border-white/10 sticky top-0 z-10">
                   <tr>
+                    <th className="px-3 py-3 font-medium w-10 text-center">
+                      <input 
+                        type="checkbox" 
+                        className="rounded border-white/20 bg-black/20" 
+                        checked={filteredAndSortedTransactions.length > 0 && selectedIds.length === filteredAndSortedTransactions.length}
+                        onChange={(e) => handleSelectAll(e, filteredAndSortedTransactions)}
+                      />
+                    </th>
                     <th className="px-3 py-3 font-medium cursor-pointer hover:text-white" onClick={() => handleSort('date')}>
                       <div className="flex items-center gap-1">거래일 <ArrowUpDown size={12}/></div>
                     </th>
@@ -464,6 +513,14 @@ export default function ImportPage() {
                     if (isEditing) {
                       return (
                         <tr key={tx.id} className="bg-white/5 transition-colors shadow-inner border-y border-primary/20">
+                          <td className="px-2 py-2 text-center">
+                            <input 
+                              type="checkbox" 
+                              className="rounded border-white/20 bg-black/20 cursor-pointer" 
+                              checked={selectedIds.includes(tx.id)}
+                              onChange={(e) => handleSelectOne(e, tx.id)}
+                            />
+                          </td>
                           <td className="px-2 py-2">
                             <input type="date" value={editForm.date || ''} onChange={e => setEditForm({...editForm, date: e.target.value})} className="w-full min-w-[110px] bg-black/20 border border-white/10 rounded px-2 py-1.5 text-foreground text-xs" />
                           </td>
@@ -519,8 +576,16 @@ export default function ImportPage() {
                         onClick={() => handleEditClick(tx)}
                         className={`hover:bg-white/5 transition-colors cursor-pointer group ${
                           isUnclassified ? 'bg-orange-500/10' : ''
-                        } ${isUnmatchedBusiness ? 'bg-rose-500/10' : ''}`}
+                        } ${isUnmatchedBusiness ? 'bg-rose-500/10' : ''} ${selectedIds.includes(tx.id) ? 'bg-primary/10' : ''}`}
                       >
+                        <td className="px-3 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                          <input 
+                            type="checkbox" 
+                            className="rounded border-white/20 bg-black/20 cursor-pointer" 
+                            checked={selectedIds.includes(tx.id)}
+                            onChange={(e) => handleSelectOne(e, tx.id)}
+                          />
+                        </td>
                         <td className="px-3 py-3 whitespace-nowrap text-muted-foreground">{tx.date}</td>
                         <td className="px-3 py-3">
                           <span className={`px-2 py-1 rounded text-[10px] font-semibold ${tx.type === 'INCOME' ? 'bg-blue-500/20 text-blue-400' : 'bg-rose-500/20 text-rose-400'}`}>
@@ -547,6 +612,57 @@ export default function ImportPage() {
                 </tbody>
               </table>
             </div>
+
+            {/* Floating Bulk Edit Bar */}
+            {selectedIds.length > 0 && (
+              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-black/90 border border-white/20 shadow-2xl rounded-2xl px-6 py-4 flex items-center gap-6 z-50 backdrop-blur-xl animate-in slide-in-from-bottom-5">
+                <div className="flex items-center gap-2 border-r border-white/10 pr-6">
+                  <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold">
+                    {selectedIds.length}
+                  </span>
+                  <span className="text-sm font-medium text-white">건 선택됨</span>
+                </div>
+                
+                <div className="flex items-center gap-4">
+                  <select 
+                    value={bulkEditForm.category || ''} 
+                    onChange={e => setBulkEditForm({...bulkEditForm, category: e.target.value})}
+                    className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-primary w-32"
+                  >
+                    <option value="" className="bg-black text-white">분류 변경안함</option>
+                    {['국내구매', '사업세금', '기타경비', '음식', '물건', '몸', '취미', '경험', '관계', '기타', '관리비', '통신비', '교통비', '세금', '대출', '보험', '청약', '사업소득'].map(cat => (
+                      <option key={cat} value={cat} className="bg-black text-white">{cat}</option>
+                    ))}
+                  </select>
+
+                  <select 
+                    value={bulkEditForm.businessNum || ''} 
+                    onChange={e => setBulkEditForm({...bulkEditForm, businessNum: e.target.value})}
+                    className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-primary w-32"
+                  >
+                    <option value="" className="bg-black text-white">사업자 변경안함</option>
+                    <option value="더엠제이" className="bg-black text-white">더엠제이</option>
+                    <option value="동주" className="bg-black text-white">동주</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-2 pl-4 border-l border-white/10">
+                  <button 
+                    onClick={() => setSelectedIds([])}
+                    className="px-4 py-1.5 text-sm font-medium text-slate-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                  >
+                    취소
+                  </button>
+                  <button 
+                    onClick={handleApplyBulkEdit}
+                    disabled={!bulkEditForm.category && !bulkEditForm.businessNum}
+                    className="px-4 py-1.5 text-sm font-medium text-white bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+                  >
+                    일괄 적용
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
