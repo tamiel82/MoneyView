@@ -436,6 +436,23 @@ export default function ImportPage() {
                   className="w-full pl-9 pr-4 py-2 bg-black/40 border border-white/10 rounded-lg text-sm text-white focus:ring-primary focus:border-primary"
                 />
               </div>
+              <button
+                onClick={() => setShowUnclassified(!showUnclassified)}
+                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${
+                  showUnclassified 
+                    ? 'bg-orange-500/20 text-orange-400 border-orange-500/50' 
+                    : 'bg-white/5 text-muted-foreground border-white/10 hover:bg-white/10'
+                }`}
+              >
+                <Filter size={14} />
+                미분류 필터링
+              </button>
+              <button
+                onClick={() => setShowUnmatchedBusiness(!showUnmatchedBusiness)}
+                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${
+                  showUnmatchedBusiness 
+                    ? 'bg-rose-500/20 text-rose-400 border-rose-500/50' 
+                    : 'bg-white/5 text-muted-foreground border-white/10 hover:bg-white/10'
                 }`}
               >
                 <Filter size={14} />
@@ -604,6 +621,64 @@ export default function ImportPage() {
                 </tbody>
               </table>
             </div>
+
+            {/* Floating Bulk Edit Bar */}
+            {selectedIds.length > 0 && (
+              <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-black/90 border border-white/20 shadow-2xl rounded-2xl px-6 py-4 flex flex-wrap items-center justify-center gap-4 sm:gap-6 z-50 backdrop-blur-xl animate-in slide-in-from-bottom-5 max-w-[95vw] w-max">
+                <div className="flex items-center gap-2 sm:border-r border-white/10 sm:pr-6">
+                  <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold">
+                    {selectedIds.length}
+                  </span>
+                  <span className="text-sm font-medium text-white whitespace-nowrap">건 선택됨</span>
+                </div>
+                
+                <div className="flex items-center gap-2 sm:gap-4 flex-wrap justify-center">
+                  <select 
+                    value={bulkEditForm.category || ''} 
+                    onChange={e => setBulkEditForm({...bulkEditForm, category: e.target.value})}
+                    className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-primary w-[110px] sm:w-32"
+                  >
+                    <option value="" className="bg-black text-white">분류 변경안함</option>
+                    {['국내구매', '사업세금', '기타경비', '음식', '물건', '몸', '취미', '경험', '관계', '기타', '관리비', '통신비', '교통비', '세금', '대출', '보험', '청약', '사업소득'].map(cat => (
+                      <option key={cat} value={cat} className="bg-black text-white">{cat}</option>
+                    ))}
+                  </select>
+
+                  <select 
+                    value={bulkEditForm.businessNum || ''} 
+                    onChange={e => setBulkEditForm({...bulkEditForm, businessNum: e.target.value})}
+                    className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-primary w-[120px] sm:w-32"
+                  >
+                    <option value="" className="bg-black text-white">사업자 변경안함</option>
+                    <option value="더엠제이" className="bg-black text-white">더엠제이</option>
+                    <option value="동주" className="bg-black text-white">동주</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-2 sm:pl-4 sm:border-l border-white/10 flex-wrap justify-center">
+                  <button 
+                    onClick={handleBulkDelete}
+                    className="px-3 py-1.5 text-sm font-medium text-rose-400 bg-rose-400/10 hover:bg-rose-400/20 rounded-lg transition-colors"
+                  >
+                    일괄 삭제
+                  </button>
+                  <button 
+                    onClick={() => setSelectedIds([])}
+                    className="px-3 py-1.5 text-sm font-medium text-slate-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                  >
+                    취소
+                  </button>
+                  <button 
+                    onClick={handleApplyBulkEdit}
+                    disabled={!bulkEditForm.category && !bulkEditForm.businessNum}
+                    className="px-3 sm:px-4 py-1.5 text-sm font-medium text-white bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors whitespace-nowrap"
+                  >
+                    일괄 적용
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
