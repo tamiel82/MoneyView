@@ -205,7 +205,7 @@ export default function ImportPage() {
   const handleFillBusiness = () => {
     let filledCount = 0;
     const newTransactions = transactions.map(tx => {
-      if (tx.category === '국내구매' && !tx.businessNum) {
+      if (tx.category === '사업지출' && !tx.businessNum) {
         if (tx.paymentMethod?.startsWith('현주')) {
           filledCount++;
           return { ...tx, businessNum: '더엠제이' };
@@ -252,7 +252,7 @@ export default function ImportPage() {
     }
 
     if (showUnmatchedBusiness) {
-      result = result.filter(tx => tx.category === '국내구매' && !tx.businessNum);
+      result = result.filter(tx => tx.category === '사업지출' && !tx.businessNum);
     }
 
     if (filterText) {
@@ -287,7 +287,7 @@ export default function ImportPage() {
     return result;
   }, [transactions, filterText, showUnclassified, showUnmatchedBusiness, sortConfig]);
 
-  const EXPENSE_CATEGORIES = ['국내구매', '사업세금', '기타경비', '음식', '물건', '몸', '취미', '경험', '관계', '기타', '관리비', '통신비', '교통비', '세금', '대출', '보험', '청약'];
+  const EXPENSE_CATEGORIES = ['사업지출', '사업세금', '기타경비', '음식', '물건', '몸', '취미', '경험', '관계', '기타', '관리비', '통신비', '교통비', '세금', '대출', '보험', '청약'];
   const INCOME_CATEGORIES = ['사업소득', '기타'];
 
   return (
@@ -398,7 +398,7 @@ export default function ImportPage() {
               <p className="text-sm text-muted-foreground mt-1">
                 총 <span className="font-medium text-foreground">{parsedData.totalRows}건</span> 중 
                 <span className="text-orange-400 font-medium ml-1">{transactions.filter(t => !t.category || t.category === '미분류').length}건 미분류</span>, 
-                <span className="text-rose-400 font-medium ml-1">{transactions.filter(t => t.category === '국내구매' && !t.businessNum).length}건 사업자 미매칭</span>
+                <span className="text-rose-400 font-medium ml-1">{transactions.filter(t => t.category === '사업지출' && !t.businessNum).length}건 사업자 미매칭</span>
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
@@ -517,7 +517,7 @@ export default function ImportPage() {
                   {filteredAndSortedTransactions.map((tx) => {
                     const isEditing = editingId === tx.id;
                     const isUnclassified = !tx.category || tx.category === '미분류';
-                    const isUnmatchedBusiness = tx.category === '국내구매' && !tx.businessNum;
+                    const isUnmatchedBusiness = tx.category === '사업지출' && !tx.businessNum;
 
                     if (isEditing) {
                       return (
@@ -639,7 +639,7 @@ export default function ImportPage() {
                     className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-primary w-[110px] sm:w-32"
                   >
                     <option value="" className="bg-black text-white">분류 변경안함</option>
-                    {['국내구매', '사업세금', '기타경비', '음식', '물건', '몸', '취미', '경험', '관계', '기타', '관리비', '통신비', '교통비', '세금', '대출', '보험', '청약', '사업소득'].map(cat => (
+                    {['사업지출', '사업세금', '기타경비', '음식', '물건', '몸', '취미', '경험', '관계', '기타', '관리비', '통신비', '교통비', '세금', '대출', '보험', '청약', '사업소득'].map(cat => (
                       <option key={cat} value={cat} className="bg-black text-white">{cat}</option>
                     ))}
                   </select>

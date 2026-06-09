@@ -65,7 +65,7 @@ export async function POST(req: Request) {
     }
 
     const matchBusinessExpense = (dateStr: string, amountNum: number) => {
-      let res = { 소비분류: '국내구매', 사업자: '', 매출처: '', 주문번호: '', matched: false };
+      let res = { 소비분류: '사업지출', 사업자: '', 매출처: '', 주문번호: '', matched: false };
       const matches = sellDf.filter(o => o.구매일 === dateStr && o.구매합계_num === Math.abs(amountNum));
       if (matches.length > 0) {
         res.matched = true;
@@ -89,7 +89,7 @@ export async function POST(req: Request) {
       let 사업자 = '', 매출처 = '', 주문번호 = '';
       let isCoupangMatchedInSellDf = false;
 
-      if (소비분류 === '사업지출' || 소비분류 === '국내구매') {
+      if (소비분류 === '사업지출' || 소비분류 === '사업지출') {
         const matched = matchBusinessExpense(결제일, 지출금액);
         if (matched.matched) {
           소비분류 = matched.소비분류; 
@@ -100,7 +100,7 @@ export async function POST(req: Request) {
             isCoupangMatchedInSellDf = true;
           }
         } else if (소비분류 === '사업지출') {
-          소비분류 = '국내구매';
+          소비분류 = '사업지출';
         }
       }
 
@@ -109,7 +109,7 @@ export async function POST(req: Request) {
       if (isCoupangMerchant && !isCoupangMatchedInSellDf) {
         const stockMatched = stockDf.find(s => String(s.날짜) === 결제일 && String(s.구매처) === '쿠팡' && numOnly(s.금액) === Math.abs(지출금액));
         if (stockMatched) {
-          소비분류 = '국내구매';
+          소비분류 = '사업지출';
           사업자 = String(stockMatched.사업자);
           매출처 = '';
           주문번호 = '';

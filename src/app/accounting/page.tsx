@@ -215,7 +215,7 @@ export default function AccountingDashboard() {
   const validTransactions = transactions.filter(t => 
     t.category && 
     t.category !== '미분류' && 
-    !(t.category === '국내구매' && (!t.businessNum || t.businessNum.trim() === ''))
+    !(t.category === '사업지출' && (!t.businessNum || t.businessNum.trim() === ''))
   );
 
   const validIncomeList = validTransactions.filter(t => t.type === 'INCOME');
@@ -226,7 +226,7 @@ export default function AccountingDashboard() {
   if (quickFilter === 'UNCLASSIFIED') {
     gridTransactions = gridTransactions.filter(t => !t.category || t.category === '미분류');
   } else if (quickFilter === 'UNMATCHED_BUSINESS') {
-    gridTransactions = gridTransactions.filter(t => t.category === '국내구매' && (!t.businessNum || t.businessNum.trim() === ''));
+    gridTransactions = gridTransactions.filter(t => t.category === '사업지출' && (!t.businessNum || t.businessNum.trim() === ''));
   }
 
   const incomeGridList = gridTransactions.filter(t => t.type === 'INCOME');
@@ -255,7 +255,7 @@ export default function AccountingDashboard() {
   
   const isBusinessExpense = (t: any) => {
     if (businessCategories.some(bc => t.category.includes(bc))) return true;
-    if (t.category === '국내구매' && (t.businessNum === '동주' || t.businessNum === '더엠제이')) return true;
+    if (t.category === '사업지출' && (t.businessNum === '동주' || t.businessNum === '더엠제이')) return true;
     return false;
   };
 
@@ -264,10 +264,10 @@ export default function AccountingDashboard() {
 
   const businessBreakdown = businessExpenses.reduce((acc, t) => {
     let key = t.category;
-    if (t.category === '국내구매' && (t.businessNum === '동주' || t.businessNum === '더엠제이')) {
+    if (t.category === '사업지출' && (t.businessNum === '동주' || t.businessNum === '더엠제이')) {
       key = t.businessNum;
-    } else if (t.category === '국내구매') {
-      key = '기타 국내구매';
+    } else if (t.category === '사업지출') {
+      key = '기타 사업지출';
     }
     acc[key] = (acc[key] || 0) + t.amount;
     return acc;
@@ -287,7 +287,7 @@ export default function AccountingDashboard() {
   const dailyExpenses = personalExpenses.filter(t => dailyCategories.includes(t.category));
   const fixedExpenses = personalExpenses.filter(t => fixedCategories.includes(t.category));
 
-  const legacyDailyMap: Record<string, string> = { '외식': '음식', '커피': '음식', '간식': '음식', '주류': '음식', '와인': '음식', '생활용품': '물건', '가전가구': '물건', '의류': '물건', '기타물품': '물건', '해외구매': '물건', '국내구매': '물건', '미용': '몸', '건강': '몸', '문화': '경험', '자기계발': '경험', '여행': '경험', '경조사': '관계' };
+  const legacyDailyMap: Record<string, string> = { '외식': '음식', '커피': '음식', '간식': '음식', '주류': '음식', '와인': '음식', '생활용품': '물건', '가전가구': '물건', '의류': '물건', '기타물품': '물건', '해외구매': '물건', '사업지출': '물건', '미용': '몸', '건강': '몸', '문화': '경험', '자기계발': '경험', '여행': '경험', '경조사': '관계' };
   const legacyFixedMap: Record<string, string> = { '대중교통': '교통비', '차량유지비': '교통비', '자동차': '교통비' };
 
   const mappedDaily = personalExpenses.filter(t => legacyDailyMap[t.category] !== undefined);

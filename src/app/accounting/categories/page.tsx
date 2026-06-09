@@ -12,7 +12,7 @@ interface Category {
 }
 
 const ALL_CATEGORIES = [
-  '국내구매', '해외구매', '음식', '물건', '몸', '취미', '경험', '관계', 
+  '사업지출', '해외구매', '음식', '물건', '몸', '취미', '경험', '관계', 
   '관리비', '통신비', '교통비', '세금', '대출', '보험', '청약', 
   '사업세금', '기타경비', '사업지출', '사업소득', '기타'
 ];
@@ -25,7 +25,7 @@ const getCategoryColor = (category: string) => {
       return 'bg-purple-500/20 text-purple-300 border border-purple-500/30';
     case '세금': case '대출': case '보험': case '청약':
       return 'bg-rose-500/20 text-rose-300 border border-rose-500/30';
-    case '국내구매': case '해외구매':
+    case '사업지출': case '해외구매':
       return 'bg-blue-500/20 text-blue-300 border border-blue-500/30';
     case '사업지출': case '사업소득': case '사업세금': case '기타경비':
       return 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';

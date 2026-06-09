@@ -17,7 +17,7 @@ interface TransactionGridProps {
 
 type SortConfig = { key: keyof Transaction | ''; direction: 'asc' | 'desc' };
 
-const EXPENSE_CATEGORIES = ['국내구매', '사업세금', '기타경비', '음식', '물건', '몸', '취미', '경험', '관계', '기타', '관리비', '통신비', '교통비', '세금', '대출', '보험', '청약'];
+const EXPENSE_CATEGORIES = ['사업지출', '사업세금', '기타경비', '음식', '물건', '몸', '취미', '경험', '관계', '기타', '관리비', '통신비', '교통비', '세금', '대출', '보험', '청약'];
 const INCOME_CATEGORIES = ['사업소득', '기타'];
 
 export default function TransactionGrid({ transactions, onRefresh, monthStr }: TransactionGridProps) {
@@ -520,7 +520,7 @@ export default function TransactionGrid({ transactions, onRefresh, monthStr }: T
                 );
               }
               const isUnclassified = !tx.category || tx.category === '미분류';
-              const isUnmatchedBusiness = tx.category === '국내구매' && (!tx.businessNum || tx.businessNum.trim() === '');
+              const isUnmatchedBusiness = tx.category === '사업지출' && (!tx.businessNum || tx.businessNum.trim() === '');
               
               return (
                 <tr key={tx.id} onClick={() => handleEditClick(tx)} className={`hover:bg-white/5 transition-colors cursor-pointer group ${isUnclassified ? 'bg-orange-500/10' : ''} ${isUnmatchedBusiness ? 'bg-rose-500/10' : ''} ${isSelected ? 'bg-primary/10' : ''}`}>
