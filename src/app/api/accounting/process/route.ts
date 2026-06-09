@@ -332,9 +332,9 @@ export async function POST(req: Request) {
               transactions.push({ 거래일: 결제일, 지출내용, 지출금액: 출금액, 소비분류, 매출처, 주문번호, 결제수단, 사업자, 비고 });
             } else {
               비고 = '입금';
-              let 소비분류 = cat ? cat.category : '';
+              let 소비분류 = '';
               let 사업자 = '';
-              if (cat && cat.category === '사업지출') {
+              if (cat) {
                 소비분류 = '사업소득';
                 사업자 = owner === '동민' ? '동주' : '더엠제이';
               }
