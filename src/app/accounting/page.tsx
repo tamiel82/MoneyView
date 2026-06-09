@@ -210,16 +210,20 @@ export default function AccountingDashboard() {
     }
   };
 
-  // 1. Filter out unclassified completely
+  // 1. Filter out unclassified completely for calculations
   const validTransactions = transactions.filter(t => t.category && t.category !== '미분류');
 
-  const incomeList = validTransactions.filter(t => t.type === 'INCOME');
-  const expenseList = validTransactions.filter(t => t.type === 'EXPENSE');
+  const validIncomeList = validTransactions.filter(t => t.type === 'INCOME');
+  const validExpenseList = validTransactions.filter(t => t.type === 'EXPENSE');
 
-  const totalIncome = incomeList.reduce((sum, t) => sum + t.amount, 0);
+  // Lists for the grid should include unclassified items so the user can edit them
+  const incomeGridList = transactions.filter(t => t.type === 'INCOME');
+  const expenseGridList = transactions.filter(t => t.type === 'EXPENSE');
+
+  const totalIncome = validIncomeList.reduce((sum, t) => sum + t.amount, 0);
 
   // Income Pie Breakdown
-  const incomeBreakdown = incomeList.reduce((acc, t) => {
+  const incomeBreakdown = validIncomeList.reduce((acc, t) => {
     let key = t.category;
     if (t.category !== '기타' && (t.businessNum === '동주' || t.businessNum === '더엠제이')) {
       key = t.businessNum;
@@ -243,7 +247,7 @@ export default function AccountingDashboard() {
     return false;
   };
 
-  const businessExpenses = expenseList.filter(isBusinessExpense);
+  const businessExpenses = validExpenseList.filter(isBusinessExpense);
   const totalBusinessExpense = businessExpenses.reduce((sum, t) => sum + t.amount, 0);
 
   const businessBreakdown = businessExpenses.reduce((acc, t) => {
@@ -262,7 +266,7 @@ export default function AccountingDashboard() {
     .sort((a, b) => b.value - a.value);
 
   // Personal Expenses
-  const personalExpenses = expenseList.filter(t => !isBusinessExpense(t));
+  const personalExpenses = validExpenseList.filter(t => !isBusinessExpense(t));
 
   // Daily Consumption
   const dailyCategories = ['음식', '물건', '몸', '취미', '경험', '관계', '기타'];
@@ -691,7 +695,7 @@ export default function AccountingDashboard() {
             </div>
             
             <TransactionGrid 
-              transactions={activeTab === 'EXPENSE' ? expenseList : incomeList} 
+              transactions={activeTab === 'EXPENSE' ? expenseGridList : incomeGridList} 
               onRefresh={() => fetchData(true)} 
               monthStr={monthStr} 
             />

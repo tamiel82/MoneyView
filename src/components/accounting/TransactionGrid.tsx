@@ -518,10 +518,10 @@ export default function TransactionGrid({ transactions, onRefresh, monthStr }: T
                     </td>
                   </tr>
                 );
-              }
-
+              const isUnclassified = !tx.category || tx.category === '미분류';
+              
               return (
-                <tr key={tx.id} onClick={() => handleEditClick(tx)} className={`hover:bg-white/5 transition-colors cursor-pointer group ${isSelected ? 'bg-primary/10' : ''}`}>
+                <tr key={tx.id} onClick={() => handleEditClick(tx)} className={`hover:bg-white/5 transition-colors cursor-pointer group ${isUnclassified ? 'bg-orange-500/10' : ''} ${isSelected ? 'bg-primary/10' : ''}`}>
                   <td className="px-3 py-3 text-center" onClick={(e) => e.stopPropagation()}>
                     <input 
                       type="checkbox" 
@@ -537,7 +537,7 @@ export default function TransactionGrid({ transactions, onRefresh, monthStr }: T
                       {tx.type === 'INCOME' ? '수입' : '지출'}
                     </span>
                   </td>
-                  <td className="px-3 py-3 font-medium text-foreground">{tx.category || '-'}</td>
+                  <td className={`px-3 py-3 font-medium ${isUnclassified ? 'text-orange-400' : 'text-foreground'}`}>{tx.category || '-'}</td>
                   <td className="px-3 py-3 max-w-[150px] truncate text-muted-foreground" title={tx.content || ''}>{tx.content}</td>
                   <td className="px-3 py-3 max-w-[150px] truncate text-muted-foreground" title={tx.merchant || ''}>{tx.merchant || '-'}</td>
                   <td className="px-3 py-3 text-right font-medium text-foreground">{tx.amount.toLocaleString()}</td>
