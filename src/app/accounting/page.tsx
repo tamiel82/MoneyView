@@ -15,6 +15,7 @@ export default function AccountingDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [activeTab, setActiveTab] = useState<'EXPENSE' | 'INCOME'>('EXPENSE');
+  const [quickFilter, setQuickFilter] = useState<'ALL' | 'UNCLASSIFIED' | 'UNMATCHED_BUSINESS'>('ALL');
 
   // Quick Add State
   const [quickAdd, setQuickAdd] = useState<{ [key: string]: string }>({});
@@ -210,15 +211,26 @@ export default function AccountingDashboard() {
     }
   };
 
-  // 1. Filter out unclassified completely for calculations
-  const validTransactions = transactions.filter(t => t.category && t.category !== '미분류');
+  // 1. Filter out unclassified completely for calculations, and domestic purchases without businessNum
+  const validTransactions = transactions.filter(t => 
+    t.category && 
+    t.category !== '미분류' && 
+    !(t.category === '국내구매' && (!t.businessNum || t.businessNum.trim() === ''))
+  );
 
   const validIncomeList = validTransactions.filter(t => t.type === 'INCOME');
   const validExpenseList = validTransactions.filter(t => t.type === 'EXPENSE');
 
   // Lists for the grid should include unclassified items so the user can edit them
-  const incomeGridList = transactions.filter(t => t.type === 'INCOME');
-  const expenseGridList = transactions.filter(t => t.type === 'EXPENSE');
+  let gridTransactions = [...transactions];
+  if (quickFilter === 'UNCLASSIFIED') {
+    gridTransactions = gridTransactions.filter(t => !t.category || t.category === '미분류');
+  } else if (quickFilter === 'UNMATCHED_BUSINESS') {
+    gridTransactions = gridTransactions.filter(t => t.category === '국내구매' && (!t.businessNum || t.businessNum.trim() === ''));
+  }
+
+  const incomeGridList = gridTransactions.filter(t => t.type === 'INCOME');
+  const expenseGridList = gridTransactions.filter(t => t.type === 'EXPENSE');
 
   const totalIncome = validIncomeList.reduce((sum, t) => sum + t.amount, 0);
 
@@ -679,19 +691,42 @@ export default function AccountingDashboard() {
 
           {/* Transaction Grid Tabs */}
           <div className="mt-8 space-y-4">
-            <div className="flex items-center gap-2 border-b border-white/10 pb-2">
-              <button 
-                onClick={() => setActiveTab('EXPENSE')} 
-                className={`px-6 py-2.5 text-sm font-bold rounded-t-xl transition-colors ${activeTab === 'EXPENSE' ? 'bg-primary/20 text-primary border-b-2 border-primary' : 'text-muted-foreground hover:bg-white/5'}`}
-              >
-                지출 내역
-              </button>
-              <button 
-                onClick={() => setActiveTab('INCOME')} 
-                className={`px-6 py-2.5 text-sm font-bold rounded-t-xl transition-colors ${activeTab === 'INCOME' ? 'bg-blue-500/20 text-blue-400 border-b-2 border-blue-400' : 'text-muted-foreground hover:bg-white/5'}`}
-              >
-                수입 내역
-              </button>
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 border-b border-white/10 pb-2">
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => setActiveTab('EXPENSE')} 
+                  className={`px-6 py-2.5 text-sm font-bold rounded-t-xl transition-colors ${activeTab === 'EXPENSE' ? 'bg-primary/20 text-primary border-b-2 border-primary' : 'text-muted-foreground hover:bg-white/5'}`}
+                >
+                  지출 내역
+                </button>
+                <button 
+                  onClick={() => setActiveTab('INCOME')} 
+                  className={`px-6 py-2.5 text-sm font-bold rounded-t-xl transition-colors ${activeTab === 'INCOME' ? 'bg-blue-500/20 text-blue-400 border-b-2 border-blue-400' : 'text-muted-foreground hover:bg-white/5'}`}
+                >
+                  수입 내역
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2 pb-1">
+                <button
+                  onClick={() => setQuickFilter('ALL')}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${quickFilter === 'ALL' ? 'bg-white/20 text-foreground' : 'bg-white/5 text-muted-foreground hover:bg-white/10'}`}
+                >
+                  전체보기
+                </button>
+                <button
+                  onClick={() => setQuickFilter('UNCLASSIFIED')}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${quickFilter === 'UNCLASSIFIED' ? 'bg-orange-500/30 text-orange-400' : 'bg-white/5 text-muted-foreground hover:bg-white/10'}`}
+                >
+                  미분류 내역보기
+                </button>
+                <button
+                  onClick={() => setQuickFilter('UNMATCHED_BUSINESS')}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${quickFilter === 'UNMATCHED_BUSINESS' ? 'bg-rose-500/30 text-rose-400' : 'bg-white/5 text-muted-foreground hover:bg-white/10'}`}
+                >
+                  사업자 미매칭 보기
+                </button>
+              </div>
             </div>
             
             <TransactionGrid 

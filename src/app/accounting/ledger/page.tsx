@@ -81,8 +81,13 @@ export default function LedgerPage() {
   const getPortfolioMonthStr1 = (m: number) => `${year}.${String(m).padStart(2, '0')}.`;
   const getPortfolioMonthStr2 = (m: number) => `${year}. ${m}.`;
 
-  // Get current transactions for a month, excluding '미분류'
-  const getValidTx = (m: number) => transactions.filter(t => t.date.startsWith(getMonthStr(m)) && t.category && t.category !== '미분류');
+  // Get current transactions for a month, excluding '미분류' and '국내구매' without businessNum
+  const getValidTx = (m: number) => transactions.filter(t => 
+    t.date.startsWith(getMonthStr(m)) && 
+    t.category && 
+    t.category !== '미분류' &&
+    !(t.category === '국내구매' && (!t.businessNum || t.businessNum.trim() === ''))
+  );
 
   const getMonthlyData = (m: number) => {
     const mStr = getMonthStr(m);
