@@ -8,29 +8,33 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const year = searchParams.get('year') || new Date().getFullYear().toString();
     
-    let allRows: any[] = [];
-    let from = 0;
     const step = 1000;
+    const { count, error: countError } = await supabase
+      .from('transactions')
+      .select('*', { count: 'exact', head: true })
+      .like('date', `${year}-%`);
 
-    while (true) {
-      const { data: rows, error } = await supabase
-        .from('transactions')
-        .select('*')
-        .like('date', `${year}-%`)
-        .order('date', { ascending: true })
-        .range(from, from + step - 1);
+    if (countError) throw countError;
 
-      if (error) throw error;
+    const total = count || 0;
+    const promises = [];
 
-      if (rows && rows.length > 0) {
-        allRows = allRows.concat(rows);
-      }
+    for (let from = 0; from < total; from += step) {
+      promises.push(
+        supabase
+          .from('transactions')
+          .select('*')
+          .like('date', `${year}-%`)
+          .order('date', { ascending: true })
+          .range(from, from + step - 1)
+      );
+    }
 
-      if (!rows || rows.length < step) {
-        break;
-      }
-
-      from += step;
+    const results = await Promise.all(promises);
+    let allRows: any[] = [];
+    for (const res of results) {
+      if (res.error) throw res.error;
+      if (res.data) allRows = allRows.concat(res.data);
     }
 
     return NextResponse.json({ transactions: allRows });

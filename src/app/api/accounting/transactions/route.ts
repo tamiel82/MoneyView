@@ -65,11 +65,22 @@ export async function GET(req: NextRequest) {
     const month = searchParams.get('month'); // YYYY-MM
     const search = searchParams.get('search'); // query string
     
-    let allRows: any[] = [];
-    let from = 0;
     const step = 1000;
+    let countQuery = supabase.from('transactions').select('*', { count: 'exact', head: true });
+    
+    if (search) {
+      countQuery = countQuery.or(`content.ilike.%${search}%,merchant.ilike.%${search}%,note.ilike.%${search}%,category.ilike.%${search}%,paymentMethod.ilike.%${search}%,businessNum.ilike.%${search}%`);
+    } else if (month) {
+      countQuery = countQuery.like('date', `${month}-%`);
+    }
 
-    while (true) {
+    const { count, error: countError } = await countQuery;
+    if (countError) throw countError;
+
+    const total = count || 0;
+    const promises = [];
+
+    for (let from = 0; from < total; from += step) {
       let query = supabase.from('transactions').select('*').range(from, from + step - 1);
       
       if (search) {
@@ -80,19 +91,14 @@ export async function GET(req: NextRequest) {
       } else {
         query = query.order('date', { ascending: false });
       }
+      promises.push(query);
+    }
 
-      const { data: rows, error } = await query;
-      if (error) throw error;
-
-      if (rows && rows.length > 0) {
-        allRows = allRows.concat(rows);
-      }
-
-      if (!rows || rows.length < step) {
-        break;
-      }
-
-      from += step;
+    const results = await Promise.all(promises);
+    let allRows: any[] = [];
+    for (const res of results) {
+      if (res.error) throw res.error;
+      if (res.data) allRows = allRows.concat(res.data);
     }
 
     return NextResponse.json({ transactions: allRows });
