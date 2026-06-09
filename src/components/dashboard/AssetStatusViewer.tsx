@@ -16,13 +16,14 @@ export default function AssetStatusViewer({ details }: { details: PositionDetail
           <table className="w-full text-sm text-left">
             <thead className="text-xs uppercase bg-white/5 text-muted-foreground border-b border-white/10">
               <tr>
-                <th scope="col" className="px-6 py-4 font-semibold">자산 / 전략</th>
+                <th scope="col" className="px-6 py-4 font-semibold">자산</th>
+                <th scope="col" className="px-6 py-4 font-semibold">전략</th>
                 <th scope="col" className="px-6 py-4 font-semibold">종목명</th>
                 <th scope="col" className="px-6 py-4 font-semibold text-right">투자 원금</th>
                 <th scope="col" className="px-6 py-4 font-semibold text-right">평가액</th>
                 <th scope="col" className="px-6 py-4 font-semibold text-right">손익액</th>
                 <th scope="col" className="px-6 py-4 font-semibold text-right">수익률</th>
-                <th scope="col" className="px-6 py-4 font-semibold text-center">비중</th>
+                <th scope="col" className="px-6 py-4 font-semibold text-right">비중</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -30,14 +31,15 @@ export default function AssetStatusViewer({ details }: { details: PositionDetail
                 const isPositive = Boolean(item.returnRate && !item.returnRate.includes("-") && item.returnRate !== "0.00%" && item.returnRate !== "0%");
                 const isNegative = Boolean(item.returnRate && item.returnRate.includes("-"));
                 const isUsd = Boolean(item.currentUsd && item.currentUsd !== "0" && item.currentUsd !== "");
+                const isUSMarket = item.country === '미국';
 
                 return (
                   <tr key={index} className="hover:bg-white/5 transition-colors group">
                     <td className="px-6 py-4">
-                      <div className="flex flex-col gap-1">
-                        <span className="font-medium text-foreground">{item.category}</span>
-                        <span className="text-xs text-muted-foreground">{item.strategy}</span>
-                      </div>
+                      <span className="font-medium text-foreground">{item.category}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-sm text-muted-foreground">{item.strategy}</span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
@@ -52,17 +54,35 @@ export default function AssetStatusViewer({ details }: { details: PositionDetail
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex flex-col">
-                        <span className="font-medium text-foreground/80">{item.investedKrw}</span>
-                        {item.investedUsd && item.investedUsd !== "0" && (
-                          <span className="text-xs text-muted-foreground">{item.investedUsd}</span>
+                        {isUSMarket && item.investedUsd && item.investedUsd !== "0" ? (
+                          <>
+                            <span className="font-medium text-foreground/80">{item.investedUsd}</span>
+                            <span className="text-xs text-muted-foreground">{item.investedKrw}</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="font-medium text-foreground/80">{item.investedKrw}</span>
+                            {item.investedUsd && item.investedUsd !== "0" && (
+                              <span className="text-xs text-muted-foreground">{item.investedUsd}</span>
+                            )}
+                          </>
                         )}
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex flex-col">
-                        <span className="font-bold text-gradient">{item.current}</span>
-                        {isUsd && (
-                          <span className="text-xs text-muted-foreground">{item.currentUsd}</span>
+                        {isUSMarket && isUsd ? (
+                          <>
+                            <span className="font-bold text-gradient">{item.currentUsd}</span>
+                            <span className="text-xs text-muted-foreground">{item.current}</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="font-bold text-gradient">{item.current}</span>
+                            {isUsd && (
+                              <span className="text-xs text-muted-foreground">{item.currentUsd}</span>
+                            )}
+                          </>
                         )}
                       </div>
                     </td>
@@ -80,9 +100,9 @@ export default function AssetStatusViewer({ details }: { details: PositionDetail
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-6 py-4 text-right">
                       {item.overallWeight && item.overallWeight !== "0" && item.overallWeight !== "" ? (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
+                        <span className="font-medium text-foreground/90">
                           {item.overallWeight}
                         </span>
                       ) : (
