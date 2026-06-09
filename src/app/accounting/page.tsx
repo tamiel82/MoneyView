@@ -45,8 +45,8 @@ export default function AccountingDashboard() {
     }
   }, [monthStr, isInitializingDate]);
 
-  const fetchData = async () => {
-    setIsLoading(true);
+  const fetchData = async (silent = false) => {
+    if (!silent) setIsLoading(true);
     try {
       const [txRes, pfRes, statRes] = await Promise.all([
         fetch(`/api/accounting/transactions?month=${monthStr}`),
@@ -684,7 +684,7 @@ export default function AccountingDashboard() {
             
             <TransactionGrid 
               transactions={activeTab === 'EXPENSE' ? expenseList : incomeList} 
-              onRefresh={fetchData} 
+              onRefresh={() => fetchData(true)} 
               monthStr={monthStr} 
             />
           </div>
