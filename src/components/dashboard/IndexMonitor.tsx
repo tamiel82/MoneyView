@@ -22,6 +22,22 @@ export default function IndexMonitor({ indices }: { indices: IndexData[] }) {
           const isPositive = Boolean(idx.change && !idx.change.includes("-") && idx.change !== "0.00%");
           const color = isPositive ? "#ef4444" : "#3b82f6"; // red-500 or blue-500
 
+          const historyVals = idx.history?.map(h => h.value) || [];
+          const currentNum = parseFloat(idx.current.replace(/,/g, ''));
+          let high = historyVals.length > 0 ? Math.max(...historyVals) : null;
+          
+          if (high !== null && !isNaN(currentNum)) {
+            if (currentNum > high) high = currentNum;
+          }
+
+          let drawdownStr = "";
+          let highStr = "";
+          if (high !== null && !isNaN(currentNum)) {
+            const drawdown = ((currentNum - high) / high) * 100;
+            drawdownStr = `${drawdown.toFixed(2)}%`;
+            highStr = high.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: high % 1 !== 0 ? 2 : 0 });
+          }
+
           return (
             <div key={i} className="bg-white/5 rounded-xl p-4 border border-white/5 flex flex-col gap-2 overflow-hidden relative group hover:bg-white/10 transition-colors">
               <div className="z-10 flex flex-col gap-1">
@@ -33,6 +49,19 @@ export default function IndexMonitor({ indices }: { indices: IndexData[] }) {
                   }`}>
                     {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
                     <span>{isPositive && !idx.change.includes("+") ? `+${idx.change}` : idx.change}</span>
+                  </div>
+                )}
+                
+                {highStr && (
+                  <div className="flex flex-col text-[11px] text-muted-foreground/70 mt-1 space-y-0.5">
+                    <div className="flex justify-between items-center">
+                      <span>전고점:</span>
+                      <span className="font-medium text-muted-foreground">{highStr}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span>고점대비:</span>
+                      <span className={`font-medium ${drawdownStr === '0.00%' ? 'text-muted-foreground' : 'text-blue-500'}`}>{drawdownStr}</span>
+                    </div>
                   </div>
                 )}
               </div>
