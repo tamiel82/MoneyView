@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import * as XLSX from 'xlsx';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -69,11 +71,11 @@ export async function GET(req: NextRequest) {
       status: 200,
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Disposition': `attachment; filename="집계내역-${month.replace('-', '')}.xlsx"`,
+        'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(`집계내역-${month.replace('-', '')}.xlsx`)}`,
       },
     });
   } catch (error: any) {
     console.error('Export error:', error);
-    return NextResponse.json({ error: '엑셀 내보내기 중 오류 발생' }, { status: 500 });
+    return NextResponse.json({ error: '엑셀 내보내기 중 오류 발생: ' + (error?.message || error) }, { status: 500 });
   }
 }
