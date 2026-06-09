@@ -26,6 +26,7 @@ export default function TransactionGrid({ transactions, onRefresh, monthStr }: T
   
   // Bulk Edit State
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
   const [bulkEditForm, setBulkEditForm] = useState<{ category?: string; businessNum?: string }>({});
   const [isBulkEditing, setIsBulkEditing] = useState(false);
   
@@ -172,14 +173,34 @@ export default function TransactionGrid({ transactions, onRefresh, monthStr }: T
     } else {
       setSelectedIds([]);
     }
+    setLastSelectedIndex(null);
   };
 
-  const handleSelectOne = (e: React.ChangeEvent<HTMLInputElement>, id: number) => {
-    if (e.target.checked) {
-      setSelectedIds(prev => [...prev, id]);
+  const handleSelectOne = (e: React.MouseEvent<HTMLInputElement>, id: number, index: number) => {
+    const checked = (e.target as HTMLInputElement).checked;
+    
+    let newSelectedIds = [...selectedIds];
+    
+    if (e.shiftKey && lastSelectedIndex !== null) {
+      const start = Math.min(lastSelectedIndex, index);
+      const end = Math.max(lastSelectedIndex, index);
+      const rangeIds = processedData.slice(start, end + 1).map(t => t.id);
+      
+      if (checked) {
+        newSelectedIds = Array.from(new Set([...newSelectedIds, ...rangeIds]));
+      } else {
+        newSelectedIds = newSelectedIds.filter(i => !rangeIds.includes(i));
+      }
     } else {
-      setSelectedIds(prev => prev.filter(i => i !== id));
+      if (checked) {
+        newSelectedIds.push(id);
+      } else {
+        newSelectedIds = newSelectedIds.filter(i => i !== id);
+      }
     }
+    
+    setSelectedIds(newSelectedIds);
+    setLastSelectedIndex(index);
   };
 
   const handleApplyBulkEdit = async () => {
@@ -438,7 +459,7 @@ export default function TransactionGrid({ transactions, onRefresh, monthStr }: T
               </tr>
             )}
 
-            {processedData.map((tx) => {
+            {processedData.map((tx, index) => {
               const isEditing = editingId === tx.id;
               const isSelected = selectedIds.includes(tx.id);
               
@@ -506,7 +527,8 @@ export default function TransactionGrid({ transactions, onRefresh, monthStr }: T
                       type="checkbox" 
                       className="rounded border-white/20 bg-black/20 cursor-pointer" 
                       checked={isSelected}
-                      onChange={(e) => handleSelectOne(e, tx.id)}
+                      onClick={(e) => handleSelectOne(e, tx.id, index)}
+                      onChange={() => {}}
                     />
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap text-muted-foreground">{tx.date}</td>
