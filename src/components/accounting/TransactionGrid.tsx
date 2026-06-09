@@ -518,6 +518,7 @@ export default function TransactionGrid({ transactions, onRefresh, monthStr }: T
                     </td>
                   </tr>
                 );
+              }
               const isUnclassified = !tx.category || tx.category === '미분류';
               
               return (
