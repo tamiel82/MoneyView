@@ -477,7 +477,7 @@ export default function TransactionGrid({ transactions, onRefresh, monthStr }: T
 
       {/* Floating Bulk Edit Bar */}
       {selectedIds.length > 0 && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-black/90 border border-white/20 shadow-2xl rounded-2xl px-6 py-4 flex flex-wrap items-center justify-center gap-4 sm:gap-6 z-50 backdrop-blur-xl animate-in slide-in-from-bottom-5 max-w-[95vw] w-max">
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-black/90 border border-white/20 shadow-2xl rounded-2xl px-6 py-4 flex flex-wrap items-center justify-center gap-4 sm:gap-6 z-50 backdrop-blur-xl animate-in slide-in-from-bottom-5 max-w-[95vw] w-max">
           <div className="flex items-center gap-2 sm:border-r border-white/10 sm:pr-6">
             <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold">
               {selectedIds.length}
