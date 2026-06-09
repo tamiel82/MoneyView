@@ -275,7 +275,7 @@ export default function AccountingDashboard() {
   const dailyExpenses = personalExpenses.filter(t => dailyCategories.includes(t.category));
   const fixedExpenses = personalExpenses.filter(t => fixedCategories.includes(t.category));
 
-  const legacyDailyMap: Record<string, string> = { '외식': '음식', '커피': '음식', '간식': '음식', '주류': '음식', '와인': '음식', '생활용품': '물건', '가전가구': '물건', '의류': '물건', '기타물품': '물건', '해외구매': '물건', '미용': '몸', '건강': '몸', '문화': '경험', '자기계발': '경험', '여행': '경험', '경조사': '관계' };
+  const legacyDailyMap: Record<string, string> = { '외식': '음식', '커피': '음식', '간식': '음식', '주류': '음식', '와인': '음식', '생활용품': '물건', '가전가구': '물건', '의류': '물건', '기타물품': '물건', '해외구매': '물건', '국내구매': '물건', '미용': '몸', '건강': '몸', '문화': '경험', '자기계발': '경험', '여행': '경험', '경조사': '관계' };
   const legacyFixedMap: Record<string, string> = { '대중교통': '교통비', '차량유지비': '교통비', '자동차': '교통비' };
 
   const mappedDaily = personalExpenses.filter(t => legacyDailyMap[t.category] !== undefined);
