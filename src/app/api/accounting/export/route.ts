@@ -15,31 +15,35 @@ export async function GET(req: NextRequest) {
       .from('transactions')
       .select('*')
       .like('date', `${month}-%`)
-      .order('date', { ascending: true });
+      .order('date', { ascending: true })
+      .limit(5000);
 
     if (error) throw error;
 
     if (!rows || rows.length === 0) {
-      return NextResponse.json({ error: 'No data found for this month' }, { status: 404 });
+      return NextResponse.json({ error: '해당 월의 데이터가 존재하지 않습니다. 먼저 업로드 후 원장 저장을 완료해주세요.' }, { status: 404 });
     }
 
     // Format for Excel
     const formattedRows = rows.map(r => ({
       '거래일': r.date,
-      '내용': r.content,
-      '금액': r.amount,
-      '유형': r.type === 'INCOME' ? '수입' : '지출',
-      '분류': r.category,
+      '지출내용': r.content,
+      '지출금액': r.type === 'INCOME' ? -Number(r.amount) : Number(r.amount),
+      '소비분류': r.category,
       '매출처': r.merchant,
-      '결제수단': r.paymentMethod,
       '주문번호': r.orderNo,
+      '결제수단': r.paymentMethod,
       '사업자': r.businessNum,
       '비고': r.note
     }));
 
+    // YYYYMMDD string for sheet name
+    const d = new Date();
+    const sheetName = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+
     const worksheet = XLSX.utils.json_to_sheet(formattedRows);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, '거래내역');
+    XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
 
     const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
 

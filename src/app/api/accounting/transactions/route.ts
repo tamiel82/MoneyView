@@ -70,11 +70,11 @@ export async function GET(req: NextRequest) {
     if (search) {
       query = query.or(`content.ilike.%${search}%,merchant.ilike.%${search}%,note.ilike.%${search}%,category.ilike.%${search}%,paymentMethod.ilike.%${search}%,businessNum.ilike.%${search}%`)
                    .order('date', { ascending: false })
-                   .limit(1000);
+                   .limit(5000);
     } else if (month) {
-      query = query.like('date', `${month}-%`).order('date', { ascending: false });
+      query = query.like('date', `${month}-%`).order('date', { ascending: false }).limit(5000);
     } else {
-      query = query.order('date', { ascending: false }).limit(1000);
+      query = query.order('date', { ascending: false }).limit(5000);
     }
 
     const { data: rows, error } = await query;

@@ -96,18 +96,26 @@ export default function AccountingDashboard() {
     setIsExporting(true);
     try {
       const res = await fetch(`/api/accounting/export?month=${monthStr}&t=${Date.now()}`);
-      if (!res.ok) throw new Error('Export failed');
+      if (!res.ok) {
+        let msg = '엑셀 다운로드 중 오류가 발생했습니다.';
+        try {
+          const errData = await res.json();
+          if (errData.error) msg = errData.error;
+        } catch (_) {}
+        alert(msg);
+        return;
+      }
       
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `가계부-${monthStr.replace('-', '')}.xlsx`;
+      a.download = `집계내역-${monthStr.replace('-', '')}.xlsx`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
-    } catch (e) {
-      alert('엑셀 다운로드 중 오류가 발생했습니다.');
+    } catch (e: any) {
+      alert(e.message || '엑셀 다운로드 중 오류가 발생했습니다.');
     } finally {
       setIsExporting(false);
     }

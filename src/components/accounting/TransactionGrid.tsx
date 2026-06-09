@@ -280,6 +280,67 @@ export default function TransactionGrid({ transactions, onRefresh, monthStr }: T
         </div>
       </div>
 
+      {/* Bulk Edit Bar (Top) */}
+      {selectedIds.length > 0 && (
+        <div className="bg-primary/10 border border-primary/20 rounded-xl px-4 sm:px-6 py-3 mb-4 flex flex-wrap items-center justify-between gap-4 animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold">
+              {selectedIds.length}
+            </span>
+            <span className="text-sm font-medium text-primary whitespace-nowrap">건 선택됨</span>
+          </div>
+          
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4 flex-1 justify-end">
+            <select 
+              value={bulkEditForm.category || ''} 
+              onChange={e => setBulkEditForm({...bulkEditForm, category: e.target.value})}
+              className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-foreground focus:outline-none focus:border-primary w-[110px] sm:w-32"
+            >
+              <option value="" className="bg-black text-white">분류 변경안함</option>
+              {EXPENSE_CATEGORIES.map(cat => (
+                <option key={cat} value={cat} className="bg-black text-white">{cat}</option>
+              ))}
+              {INCOME_CATEGORIES.map(cat => (
+                <option key={cat} value={cat} className="bg-black text-white">{cat}</option>
+              ))}
+            </select>
+
+            <select 
+              value={bulkEditForm.businessNum || ''} 
+              onChange={e => setBulkEditForm({...bulkEditForm, businessNum: e.target.value})}
+              className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-foreground focus:outline-none focus:border-primary w-[120px] sm:w-32"
+            >
+              <option value="" className="bg-black text-white">사업자 변경안함</option>
+              <option value="더엠제이" className="bg-black text-white">더엠제이</option>
+              <option value="동주" className="bg-black text-white">동주</option>
+            </select>
+
+            <div className="flex items-center gap-2 pl-2 sm:pl-4 sm:border-l border-white/10">
+              <button 
+                onClick={handleBulkDelete}
+                disabled={isBulkEditing}
+                className="px-3 py-1.5 text-sm font-medium text-rose-400 bg-rose-400/10 hover:bg-rose-400/20 rounded-lg transition-colors disabled:opacity-50 whitespace-nowrap"
+              >
+                삭제
+              </button>
+              <button 
+                onClick={() => setSelectedIds([])}
+                className="px-3 py-1.5 text-sm font-medium text-slate-300 hover:text-foreground hover:bg-white/10 rounded-lg transition-colors whitespace-nowrap"
+              >
+                취소
+              </button>
+              <button 
+                onClick={handleApplyBulkEdit}
+                disabled={isBulkEditing || (!bulkEditForm.category && !bulkEditForm.businessNum)}
+                className="px-3 sm:px-4 py-1.5 text-sm font-medium text-white bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors whitespace-nowrap"
+              >
+                {isBulkEditing ? '적용 중...' : '적용'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="overflow-x-auto flex-1 relative">
         <table className="w-full text-sm text-left">
           <thead className="bg-black/40 text-muted-foreground sticky top-0 z-10 backdrop-blur-md">
@@ -475,66 +536,6 @@ export default function TransactionGrid({ transactions, onRefresh, monthStr }: T
         </table>
       </div>
 
-      {/* Floating Bulk Edit Bar */}
-      {selectedIds.length > 0 && (
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-black/90 border border-white/20 shadow-2xl rounded-2xl px-6 py-4 flex flex-wrap items-center justify-center gap-4 sm:gap-6 z-50 backdrop-blur-xl animate-in slide-in-from-bottom-5 max-w-[95vw] w-max">
-          <div className="flex items-center gap-2 sm:border-r border-white/10 sm:pr-6">
-            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold">
-              {selectedIds.length}
-            </span>
-            <span className="text-sm font-medium text-white whitespace-nowrap">건 선택됨</span>
-          </div>
-          
-          <div className="flex items-center gap-2 sm:gap-4 flex-wrap justify-center">
-            <select 
-              value={bulkEditForm.category || ''} 
-              onChange={e => setBulkEditForm({...bulkEditForm, category: e.target.value})}
-              className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-primary w-[110px] sm:w-32"
-            >
-              <option value="" className="bg-black text-white">분류 변경안함</option>
-              {EXPENSE_CATEGORIES.map(cat => (
-                <option key={cat} value={cat} className="bg-black text-white">{cat}</option>
-              ))}
-              {INCOME_CATEGORIES.map(cat => (
-                <option key={cat} value={cat} className="bg-black text-white">{cat}</option>
-              ))}
-            </select>
-
-            <select 
-              value={bulkEditForm.businessNum || ''} 
-              onChange={e => setBulkEditForm({...bulkEditForm, businessNum: e.target.value})}
-              className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-primary w-[120px] sm:w-32"
-            >
-              <option value="" className="bg-black text-white">사업자 변경안함</option>
-              <option value="더엠제이" className="bg-black text-white">더엠제이</option>
-              <option value="동주" className="bg-black text-white">동주</option>
-            </select>
-          </div>
-
-          <div className="flex items-center gap-2 sm:pl-4 sm:border-l border-white/10 flex-wrap justify-center">
-            <button 
-              onClick={handleBulkDelete}
-              disabled={isBulkEditing}
-              className="px-3 py-1.5 text-sm font-medium text-rose-400 bg-rose-400/10 hover:bg-rose-400/20 rounded-lg transition-colors disabled:opacity-50"
-            >
-              일괄 삭제
-            </button>
-            <button 
-              onClick={() => setSelectedIds([])}
-              className="px-3 py-1.5 text-sm font-medium text-slate-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-            >
-              취소
-            </button>
-            <button 
-              onClick={handleApplyBulkEdit}
-              disabled={isBulkEditing || (!bulkEditForm.category && !bulkEditForm.businessNum)}
-              className="px-3 sm:px-4 py-1.5 text-sm font-medium text-white bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors whitespace-nowrap"
-            >
-              {isBulkEditing ? '적용 중...' : '일괄 적용'}
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
