@@ -65,22 +65,37 @@ export async function GET(req: NextRequest) {
     const month = searchParams.get('month'); // YYYY-MM
     const search = searchParams.get('search'); // query string
     
-    let query = supabase.from('transactions').select('*');
-    
-    if (search) {
-      query = query.or(`content.ilike.%${search}%,merchant.ilike.%${search}%,note.ilike.%${search}%,category.ilike.%${search}%,paymentMethod.ilike.%${search}%,businessNum.ilike.%${search}%`)
-                   .order('date', { ascending: false })
-                   .limit(5000);
-    } else if (month) {
-      query = query.like('date', `${month}-%`).order('date', { ascending: false }).limit(5000);
-    } else {
-      query = query.order('date', { ascending: false }).limit(5000);
+    let allRows: any[] = [];
+    let from = 0;
+    const step = 1000;
+
+    while (true) {
+      let query = supabase.from('transactions').select('*').range(from, from + step - 1);
+      
+      if (search) {
+        query = query.or(`content.ilike.%${search}%,merchant.ilike.%${search}%,note.ilike.%${search}%,category.ilike.%${search}%,paymentMethod.ilike.%${search}%,businessNum.ilike.%${search}%`)
+                     .order('date', { ascending: false });
+      } else if (month) {
+        query = query.like('date', `${month}-%`).order('date', { ascending: false });
+      } else {
+        query = query.order('date', { ascending: false });
+      }
+
+      const { data: rows, error } = await query;
+      if (error) throw error;
+
+      if (rows && rows.length > 0) {
+        allRows = allRows.concat(rows);
+      }
+
+      if (!rows || rows.length < step) {
+        break;
+      }
+
+      from += step;
     }
 
-    const { data: rows, error } = await query;
-    if (error) throw error;
-
-    return NextResponse.json({ transactions: rows });
+    return NextResponse.json({ transactions: allRows });
   } catch (error: any) {
     console.error('Fetch error:', error);
     return NextResponse.json({ error: '데이터 조회 중 오류: ' + error.message }, { status: 500 });

@@ -11,14 +11,32 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'month parameter is required' }, { status: 400 });
     }
 
-    const { data: rows, error } = await supabase
-      .from('transactions')
-      .select('*')
-      .like('date', `${month}-%`)
-      .order('date', { ascending: true })
-      .limit(5000);
+    let allRows: any[] = [];
+    let from = 0;
+    const step = 1000;
 
-    if (error) throw error;
+    while (true) {
+      const { data: rows, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .like('date', `${month}-%`)
+        .order('date', { ascending: true })
+        .range(from, from + step - 1);
+
+      if (error) throw error;
+
+      if (rows && rows.length > 0) {
+        allRows = allRows.concat(rows);
+      }
+
+      if (!rows || rows.length < step) {
+        break;
+      }
+
+      from += step;
+    }
+    
+    const rows = allRows;
 
     if (!rows || rows.length === 0) {
       return NextResponse.json({ error: '해당 월의 데이터가 존재하지 않습니다. 먼저 업로드 후 원장 저장을 완료해주세요.' }, { status: 404 });
