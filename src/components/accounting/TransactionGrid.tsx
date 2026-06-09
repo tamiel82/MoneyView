@@ -202,6 +202,25 @@ export default function TransactionGrid({ transactions, onRefresh, monthStr }: T
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`선택한 ${selectedIds.length}개의 내역을 정말 삭제하시겠습니까?`)) return;
+    
+    setIsBulkEditing(true);
+    try {
+      const res = await fetch(`/api/accounting/transactions?ids=${selectedIds.join(',')}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) throw new Error('일괄 삭제 실패');
+      setSelectedIds([]);
+      onRefresh();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setIsBulkEditing(false);
+    }
+  };
+
   const handleSaveAdd = async () => {
     try {
       const res = await fetch('/api/accounting/transactions', {
@@ -458,19 +477,19 @@ export default function TransactionGrid({ transactions, onRefresh, monthStr }: T
 
       {/* Floating Bulk Edit Bar */}
       {selectedIds.length > 0 && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-black/90 border border-white/20 shadow-2xl rounded-2xl px-6 py-4 flex items-center gap-6 z-50 backdrop-blur-xl animate-in slide-in-from-bottom-5">
-          <div className="flex items-center gap-2 border-r border-white/10 pr-6">
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-black/90 border border-white/20 shadow-2xl rounded-2xl px-6 py-4 flex flex-wrap items-center justify-center gap-4 sm:gap-6 z-50 backdrop-blur-xl animate-in slide-in-from-bottom-5 max-w-[95vw] w-max">
+          <div className="flex items-center gap-2 sm:border-r border-white/10 sm:pr-6">
             <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold">
               {selectedIds.length}
             </span>
-            <span className="text-sm font-medium text-white">건 선택됨</span>
+            <span className="text-sm font-medium text-white whitespace-nowrap">건 선택됨</span>
           </div>
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 flex-wrap justify-center">
             <select 
               value={bulkEditForm.category || ''} 
               onChange={e => setBulkEditForm({...bulkEditForm, category: e.target.value})}
-              className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-primary w-32"
+              className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-primary w-[110px] sm:w-32"
             >
               <option value="" className="bg-black text-white">분류 변경안함</option>
               {EXPENSE_CATEGORIES.map(cat => (
@@ -484,7 +503,7 @@ export default function TransactionGrid({ transactions, onRefresh, monthStr }: T
             <select 
               value={bulkEditForm.businessNum || ''} 
               onChange={e => setBulkEditForm({...bulkEditForm, businessNum: e.target.value})}
-              className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-primary w-32"
+              className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-primary w-[120px] sm:w-32"
             >
               <option value="" className="bg-black text-white">사업자 변경안함</option>
               <option value="더엠제이" className="bg-black text-white">더엠제이</option>
@@ -492,17 +511,24 @@ export default function TransactionGrid({ transactions, onRefresh, monthStr }: T
             </select>
           </div>
 
-          <div className="flex items-center gap-2 pl-4 border-l border-white/10">
+          <div className="flex items-center gap-2 sm:pl-4 sm:border-l border-white/10 flex-wrap justify-center">
+            <button 
+              onClick={handleBulkDelete}
+              disabled={isBulkEditing}
+              className="px-3 py-1.5 text-sm font-medium text-rose-400 bg-rose-400/10 hover:bg-rose-400/20 rounded-lg transition-colors disabled:opacity-50"
+            >
+              일괄 삭제
+            </button>
             <button 
               onClick={() => setSelectedIds([])}
-              className="px-4 py-1.5 text-sm font-medium text-slate-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+              className="px-3 py-1.5 text-sm font-medium text-slate-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
             >
               취소
             </button>
             <button 
               onClick={handleApplyBulkEdit}
               disabled={isBulkEditing || (!bulkEditForm.category && !bulkEditForm.businessNum)}
-              className="px-4 py-1.5 text-sm font-medium text-white bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+              className="px-3 sm:px-4 py-1.5 text-sm font-medium text-white bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors whitespace-nowrap"
             >
               {isBulkEditing ? '적용 중...' : '일괄 적용'}
             </button>

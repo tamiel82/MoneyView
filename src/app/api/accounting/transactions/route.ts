@@ -124,12 +124,22 @@ export async function DELETE(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
+    const idsParam = searchParams.get('ids');
 
-    if (!id) {
+    if (!id && !idsParam) {
       return NextResponse.json({ error: 'ID is required for deletion' }, { status: 400 });
     }
 
-    const { error } = await supabase.from('transactions').delete().eq('id', id);
+    let query = supabase.from('transactions').delete();
+    
+    if (idsParam) {
+      const ids = idsParam.split(',').map(i => i.trim());
+      query = query.in('id', ids);
+    } else {
+      query = query.eq('id', id);
+    }
+
+    const { error } = await query;
     if (error) throw error;
 
     // Trigger async sync without awaiting
