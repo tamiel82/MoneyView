@@ -48,13 +48,13 @@ export async function GET(req: NextRequest) {
     const formattedRows = rows.map(r => ({
       '거래일': r.date,
       '지출내용': r.content,
-      '지출금액': r.type === 'INCOME' ? -Number(r.amount) : Number(r.amount),
+      '지출금액': Number(r.amount),
       '소비분류': r.category,
       '매출처': r.merchant,
       '주문번호': r.orderNo,
       '결제수단': r.paymentMethod,
       '사업자': r.businessNum,
-      '비고': r.note
+      '비고': r.type === 'INCOME' ? '수입' : '지출'
     }));
 
     // YYYYMMDD string for sheet name
