@@ -40,26 +40,28 @@ export default function IndexMonitor({ indices }: { indices: IndexData[] }) {
 
           return (
             <div key={i} className="bg-white/5 rounded-xl p-4 border border-white/5 flex flex-col gap-2 overflow-hidden relative group hover:bg-white/10 transition-colors">
-              <div className="z-10 flex flex-col gap-1">
-                <span className="text-sm text-muted-foreground font-medium">{idx.name}</span>
-                <span className="text-lg font-bold">{idx.current}</span>
-                {idx.change && (
-                  <div className={`flex items-center gap-1 text-xs font-semibold ${
-                    isPositive ? "text-red-500" : "text-blue-500"
-                  }`}>
-                    {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                    <span>{isPositive && !idx.change.includes("+") ? `+${idx.change}` : idx.change}</span>
-                  </div>
-                )}
+              <div className="z-10 flex justify-between items-start">
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm text-muted-foreground font-medium">{idx.name}</span>
+                  <span className="text-lg font-bold">{idx.current}</span>
+                  {idx.change && (
+                    <div className={`flex items-center gap-1 text-xs font-semibold ${
+                      isPositive ? "text-red-500" : "text-blue-500"
+                    }`}>
+                      {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                      <span>{isPositive && !idx.change.includes("+") ? `+${idx.change}` : idx.change}</span>
+                    </div>
+                  )}
+                </div>
                 
                 {highStr && (
-                  <div className="flex flex-col text-[11px] text-muted-foreground/70 mt-1 space-y-0.5">
-                    <div className="flex justify-between items-center">
-                      <span>전고점:</span>
+                  <div className="flex flex-col text-[11px] text-right space-y-1 mt-0.5">
+                    <div>
+                      <span className="text-muted-foreground/60 mr-1.5">전고점</span>
                       <span className="font-medium text-muted-foreground">{highStr}</span>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span>고점대비:</span>
+                    <div>
+                      <span className="text-muted-foreground/60 mr-1.5">고점대비</span>
                       <span className={`font-medium ${drawdownStr === '0.00%' ? 'text-muted-foreground' : 'text-blue-500'}`}>{drawdownStr}</span>
                     </div>
                   </div>
