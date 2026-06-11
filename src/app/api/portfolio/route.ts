@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { getPortfolioData } from '@/lib/portfolioService';
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 60; // Cache for 60 seconds
 
 export async function GET() {
   try {

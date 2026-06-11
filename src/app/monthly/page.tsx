@@ -1,7 +1,7 @@
 import { getPortfolioData } from "@/lib/portfolioService";
 import MonthlyTable from "@/components/monthly/MonthlyTable";
 
-export const revalidate = 60; // Cache for 60 seconds
+export const dynamic = 'force-dynamic';
 
 export default async function MonthlyPage() {
   let portfolioData;

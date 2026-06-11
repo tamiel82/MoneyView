@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   description: "통합 자산 관리 거래 및 환전 기록",
 };
 
-export const revalidate = 60; // Cache the history data for 60 seconds
+export const dynamic = 'force-dynamic';
 
 export default async function HistoryPage() {
   const data = await getHistoryData();

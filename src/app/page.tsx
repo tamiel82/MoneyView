@@ -7,7 +7,7 @@ import IndexMonitor from "@/components/dashboard/IndexMonitor";
 import MonthlyChart from "@/components/dashboard/MonthlyChart";
 import AutoRefresh from "@/components/dashboard/AutoRefresh";
 
-export const revalidate = 60; // Cache for 60 seconds
+export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
   let portfolioData;

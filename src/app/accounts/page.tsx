@@ -1,7 +1,7 @@
 import { getPortfolioData } from "@/lib/portfolioService";
 import HoldingsViewer from "@/components/dashboard/HoldingsViewer";
 
-export const revalidate = 60; // Cache for 60 seconds
+export const dynamic = 'force-dynamic';
 
 export default async function AccountsPage() {
   let portfolioData;
