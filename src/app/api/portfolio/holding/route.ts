@@ -10,7 +10,7 @@ const supabase = createClient(
 // PUT: Edit existing holding (quantity & unitPrice)
 export async function PUT(request: Request) {
   try {
-    const { rowIndex, unitPrice, quantity } = await request.json();
+    const { rowIndex, unitPrice, quantity, currency } = await request.json();
 
     if (!rowIndex || unitPrice === undefined || quantity === undefined) {
       return NextResponse.json({ error: 'rowIndex, unitPrice, and quantity are required' }, { status: 400 });
@@ -47,10 +47,13 @@ export async function PUT(request: Request) {
     });
 
     // Sync to Supabase DB
-    const { error: dbError } = await supabase.from('holdings').update({
+    const updatePayload: any = {
       unit_price: unitPrice,
       quantity: quantity
-    }).eq('row_index', rowIndex);
+    };
+    if (currency) updatePayload.currency = currency;
+
+    const { error: dbError } = await supabase.from('holdings').update(updatePayload).eq('row_index', rowIndex);
 
     if (dbError) {
       console.error('Supabase update error:', dbError);
@@ -67,7 +70,7 @@ export async function PUT(request: Request) {
 // POST: Add new holding (insert row & write values/formulas)
 export async function POST(request: Request) {
   try {
-    const { insertRowIndex, addAccountName, subAccount, strategy, name, ticker, unitPrice, quantity } = await request.json();
+    const { insertRowIndex, addAccountName, subAccount, strategy, name, ticker, unitPrice, quantity, currency } = await request.json();
 
     if (!insertRowIndex || !subAccount || !name || !ticker || unitPrice === undefined || quantity === undefined) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -174,7 +177,8 @@ export async function POST(request: Request) {
         name: name,
         strategy: strategy,
         quantity: quantity,
-        unit_price: unitPrice
+        unit_price: unitPrice,
+        currency: currency || 'KRW'
       });
     }
 

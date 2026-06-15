@@ -57,6 +57,7 @@ export interface AllocationHolding {
   currentValueKrw: string;
   profitRate: string;
   weight: string;
+  currency?: string;
   history?: { date: string; value: number }[];
 }
 

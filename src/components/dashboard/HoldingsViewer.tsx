@@ -26,6 +26,7 @@ export default function HoldingsViewer({ allocations }: { allocations: Record<st
   // Form States (Edit)
   const [editPrice, setEditPrice] = useState("");
   const [editQty, setEditQty] = useState("");
+  const [editCurrency, setEditCurrency] = useState("KRW");
 
   // Form States (Add)
   const [subAccount, setSubAccount] = useState("");
@@ -34,6 +35,7 @@ export default function HoldingsViewer({ allocations }: { allocations: Record<st
   const [ticker, setTicker] = useState("");
   const [unitPrice, setUnitPrice] = useState("");
   const [quantity, setQuantity] = useState("");
+  const [currency, setCurrency] = useState("KRW");
 
   // Loading States
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -75,6 +77,7 @@ export default function HoldingsViewer({ allocations }: { allocations: Record<st
     const rawQty = holding.quantity.replace(/[^0-9.-]+/g, "");
     setEditPrice(rawPrice);
     setEditQty(rawQty);
+    setEditCurrency(holding.currency || "KRW");
   };
 
   const openAddModal = (accountName: string, subName = "") => {
@@ -97,6 +100,13 @@ export default function HoldingsViewer({ allocations }: { allocations: Record<st
     setTicker("");
     setUnitPrice("");
     setQuantity("");
+    
+    // Default currency to USD for 현주주식 and 동민주식, otherwise KRW
+    if (accountName === "현주주식" || accountName === "동민주식") {
+      setCurrency("USD");
+    } else {
+      setCurrency("KRW");
+    }
   };
 
   // Submit functions
@@ -121,6 +131,7 @@ export default function HoldingsViewer({ allocations }: { allocations: Record<st
           rowIndex: editHolding.rowIndex,
           unitPrice: parsedPrice,
           quantity: parsedQty,
+          currency: editCurrency,
         }),
       });
 
@@ -223,6 +234,7 @@ export default function HoldingsViewer({ allocations }: { allocations: Record<st
           ticker: ticker.toUpperCase().trim(),
           unitPrice: parsedPrice,
           quantity: parsedQty,
+          currency: currency,
         }),
       });
 
@@ -315,7 +327,7 @@ export default function HoldingsViewer({ allocations }: { allocations: Record<st
                           const isPositive = Boolean(detail.profitRate && !detail.profitRate.includes("-") && detail.profitRate !== "0.00%" && detail.profitRate !== "0%");
                           const isNegative = Boolean(detail.profitRate && detail.profitRate.includes("-"));
                           
-                          const isUsdAsset = Boolean(detail.currentValueKrw && detail.currentValueKrw !== "" && detail.currentValueKrw !== detail.currentValue);
+                          const isUsdAsset = detail.currency === "USD";
                           
                           const formatCurrency = (val: string, isUsd: boolean) => {
                             if (!val || val === "-" || val === "") return val;
@@ -443,6 +455,17 @@ export default function HoldingsViewer({ allocations }: { allocations: Record<st
             </div>
 
             <form onSubmit={handleEditSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase">통화 (Currency)</label>
+                <select
+                  value={editCurrency}
+                  onChange={(e) => setEditCurrency(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 text-base cursor-pointer"
+                >
+                  <option value="KRW">원화 (KRW)</option>
+                  <option value="USD">달러 (USD)</option>
+                </select>
+              </div>
               <div>
                 <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase">보유수량</label>
                 <input 
@@ -601,6 +624,18 @@ export default function HoldingsViewer({ allocations }: { allocations: Record<st
                     required
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase">통화 (Currency)</label>
+                <select
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 text-base cursor-pointer"
+                >
+                  <option value="KRW">원화 (KRW)</option>
+                  <option value="USD">달러 (USD)</option>
+                </select>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
