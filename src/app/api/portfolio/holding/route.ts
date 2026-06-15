@@ -47,10 +47,15 @@ export async function PUT(request: Request) {
     });
 
     // Sync to Supabase DB
-    await supabase.from('holdings').update({
+    const { error: dbError } = await supabase.from('holdings').update({
       unit_price: unitPrice,
       quantity: quantity
     }).eq('row_index', rowIndex);
+
+    if (dbError) {
+      console.error('Supabase update error:', dbError);
+      // Even if DB fails, we don't fail the whole request because Sheets succeeded, but we should log it.
+    }
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

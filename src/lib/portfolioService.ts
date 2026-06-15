@@ -209,7 +209,11 @@ export async function getPortfolioData(): Promise<PortfolioData> {
 
   // 4-1. Fetch Target Accounts from Supabase DB
   const { createClient } = require('@supabase/supabase-js');
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+    global: {
+      fetch: (url: string, options: any) => fetch(url, { ...options, cache: 'no-store' })
+    }
+  });
   
   const { data: dbHoldings } = await supabase
     .from('holdings')
