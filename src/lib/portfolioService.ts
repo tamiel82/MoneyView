@@ -168,6 +168,7 @@ export async function getPortfolioData(): Promise<PortfolioData> {
   // 4. 자산배분현황 파싱
   const allocations: Record<string, any[]> = {};
   let currentAccountId = "";
+  const DB_TARGET_ACCOUNTS = ['현주주식', '동민주식', '현주절세', '동민절세', '동민코인'];
 
   for (let i = 0; i < allocationRows.length; i++) {
     const row = allocationRows[i];
@@ -175,7 +176,7 @@ export async function getPortfolioData(): Promise<PortfolioData> {
 
     // Detect Account Header
     if (row[1] && row[1] !== "자산" && row[1] !== "평가손익" && !row[6]) {
-       currentAccountId = row[1];
+       currentAccountId = row[1].trim();
        if (!allocations[currentAccountId]) {
          allocations[currentAccountId] = [];
        }
@@ -184,6 +185,9 @@ export async function getPortfolioData(): Promise<PortfolioData> {
 
     // Detect Holding
     if (currentAccountId && row[6] && row[6] !== "현재가") {
+       // DB 전환 계좌는 시트에서 읽지 않고 스킵
+       if (DB_TARGET_ACCOUNTS.includes(currentAccountId)) continue;
+
        allocations[currentAccountId].push({
          rowIndex: i + 1, // Store the 1-indexed row number of this holding
          accountId: currentAccountId,
@@ -200,6 +204,81 @@ export async function getPortfolioData(): Promise<PortfolioData> {
          profitRate: row[13] || '',
          weight: row[14] || '',
        });
+    }
+  }
+
+  // 4-1. Fetch Target Accounts from Supabase DB
+  const { createClient } = require('@supabase/supabase-js');
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+  
+  const { data: dbHoldings } = await supabase
+    .from('holdings')
+    .select('*, accounts!inner(name)')
+    .in('accounts.name', DB_TARGET_ACCOUNTS)
+    .order('row_index', { ascending: true });
+
+  if (dbHoldings) {
+    const formatYahooTickerLocal = (ticker: string): string => {
+      let t = ticker.trim().toUpperCase();
+      if (!t) return "";
+      if (/^\d{6}$/.test(t)) return `${t}.KS`;
+      if (/^(BTC|ETH|SOL|XRP|DOGE|ADA)KRW$/.test(t)) return t.replace(/^(BTC|ETH|SOL|XRP|DOGE|ADA)KRW$/, "$1-KRW");
+      if (t === "USDT") return "USDT-USD";
+      if (t === "USDC") return "USDC-USD";
+      if (t === "BTC") return "BTC-USD";
+      if (t === "ETH") return "ETH-USD";
+      return t.replace(/\./g, "-");
+    };
+
+    const dbTickers = Array.from(new Set(dbHoldings.map(h => h.ticker).filter(t => t && t !== 'UNKNOWN' && t !== 'KRW' && t !== 'USD')));
+    
+    // Fetch quotes concurrently
+    const quotesArr = await Promise.allSettled(dbTickers.map(t => yahooFinance.quote(formatYahooTickerLocal(t))));
+    const quotesMap: Record<string, number> = {};
+    quotesArr.forEach((res, i) => {
+      if (res.status === 'fulfilled' && res.value && res.value.regularMarketPrice) {
+        quotesMap[dbTickers[i]] = res.value.regularMarketPrice;
+      }
+    });
+
+    const krwQuote = await yahooFinance.quote('KRW=X').catch(() => null);
+    const exchangeRate = krwQuote?.regularMarketPrice || 1400;
+
+    for (const h of dbHoldings) {
+      const accName = h.accounts.name;
+      if (!allocations[accName]) allocations[accName] = [];
+      
+      const isUsd = (h.ticker && h.ticker !== 'UNKNOWN' && h.ticker !== 'KRW');
+      let currentPriceNum = h.unit_price; 
+      if (h.ticker === 'USD') currentPriceNum = exchangeRate;
+      else if (quotesMap[h.ticker]) currentPriceNum = quotesMap[h.ticker];
+
+      const investedVal = h.unit_price * h.quantity;
+      const currentVal = currentPriceNum * h.quantity;
+      let currentValKrw = currentVal;
+      if (isUsd) currentValKrw = currentVal * exchangeRate;
+
+      let profitRateNum = 0;
+      if (investedVal > 0) profitRateNum = (currentVal / investedVal) - 1;
+
+      const formatNum = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 2 });
+      
+      allocations[accName].push({
+        rowIndex: h.row_index,
+        accountId: accName,
+        subAccount: h.sub_account || '',
+        strategy: h.strategy || '',
+        name: h.name || '',
+        ticker: h.ticker || '',
+        currentPrice: formatNum(currentPriceNum),
+        unitPrice: formatNum(h.unit_price),
+        quantity: formatNum(h.quantity),
+        investedValue: formatNum(investedVal),
+        currentValue: formatNum(currentVal),
+        currentValueKrw: formatNum(currentValKrw),
+        profitRate: (profitRateNum * 100).toFixed(2) + '%',
+        weight: '0%', 
+      });
     }
   }
 

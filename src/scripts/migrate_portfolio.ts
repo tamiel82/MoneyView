@@ -73,6 +73,7 @@ async function main() {
     // Detect Holding
     if (currentAccountId && row[6] && row[6] !== "현재가") {
        allocations[currentAccountId].push({
+         rowIndex: i + 1,
          subAccount: row[1] || '',
          strategy: row[3] || '',
          name: row[4] || row[3] || '',
@@ -125,6 +126,8 @@ async function main() {
 
       holdingsToInsert.push({
         account_id: accId,
+        sub_account: h.subAccount,
+        row_index: h.rowIndex,
         ticker: cleanTicker,
         name: h.name,
         strategy: h.strategy,

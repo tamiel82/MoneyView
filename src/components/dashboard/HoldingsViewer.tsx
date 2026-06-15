@@ -216,6 +216,7 @@ export default function HoldingsViewer({ allocations }: { allocations: Record<st
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           insertRowIndex,
+          addAccountName,
           subAccount: subAccount.trim(),
           strategy: strategy.trim(),
           name: name.trim(),

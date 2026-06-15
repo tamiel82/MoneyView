@@ -1,5 +1,11 @@
 import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 // PUT: Edit existing holding (quantity & unitPrice)
 export async function PUT(request: Request) {
@@ -40,6 +46,12 @@ export async function PUT(request: Request) {
       },
     });
 
+    // Sync to Supabase DB
+    await supabase.from('holdings').update({
+      unit_price: unitPrice,
+      quantity: quantity
+    }).eq('row_index', rowIndex);
+
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('Holding edit error:', error);
@@ -50,7 +62,7 @@ export async function PUT(request: Request) {
 // POST: Add new holding (insert row & write values/formulas)
 export async function POST(request: Request) {
   try {
-    const { insertRowIndex, subAccount, strategy, name, ticker, unitPrice, quantity } = await request.json();
+    const { insertRowIndex, addAccountName, subAccount, strategy, name, ticker, unitPrice, quantity } = await request.json();
 
     if (!insertRowIndex || !subAccount || !name || !ticker || unitPrice === undefined || quantity === undefined) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -132,6 +144,35 @@ export async function POST(request: Request) {
       },
     });
 
+    // 4. Sync to Supabase DB
+    // Shift row_index for subsequent holdings
+    const { data: laterHoldings } = await supabase.from('holdings').select('*').gte('row_index', insertRowIndex);
+    if (laterHoldings && laterHoldings.length > 0) {
+      const updatedHoldings = laterHoldings.map(h => ({ ...h, row_index: h.row_index + 1 }));
+      await supabase.from('holdings').upsert(updatedHoldings);
+    }
+    
+    // Insert the new holding
+    const { data: accData } = await supabase.from('accounts').select('id').eq('name', addAccountName).single();
+    if (accData) {
+      let cleanTicker = ticker.replace(/=HYPERLINK\(.*,"(.*)"\)/, "$1").trim();
+      if (!cleanTicker) {
+        if (name.includes('현금') || name.includes('원화')) cleanTicker = 'KRW';
+        else if (name.includes('달러') || name.includes('USD')) cleanTicker = 'USD';
+        else cleanTicker = 'UNKNOWN';
+      }
+      await supabase.from('holdings').insert({
+        account_id: accData.id,
+        sub_account: subAccount,
+        row_index: insertRowIndex,
+        ticker: cleanTicker,
+        name: name,
+        strategy: strategy,
+        quantity: quantity,
+        unit_price: unitPrice
+      });
+    }
+
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('Holding add error:', error);
@@ -193,6 +234,16 @@ export async function DELETE(request: Request) {
         ],
       },
     });
+
+    // 3. Sync to Supabase DB
+    await supabase.from('holdings').delete().eq('row_index', rowIndex);
+    
+    // Shift row_index for subsequent holdings
+    const { data: laterHoldings } = await supabase.from('holdings').select('*').gt('row_index', rowIndex);
+    if (laterHoldings && laterHoldings.length > 0) {
+      const updatedHoldings = laterHoldings.map(h => ({ ...h, row_index: h.row_index - 1 }));
+      await supabase.from('holdings').upsert(updatedHoldings);
+    }
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
