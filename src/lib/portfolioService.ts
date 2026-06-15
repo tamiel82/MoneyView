@@ -284,6 +284,76 @@ export async function getPortfolioData(): Promise<PortfolioData> {
         weight: '0%', 
       });
     }
+
+    // 4-2. Override Top-Level Summaries with Live DB Values
+    let totalCurrentDiff = 0;
+    let totalUsdDiff = 0;
+    
+    const formatInt = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+    const formatUsd = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    accounts.forEach(acc => {
+      if (DB_TARGET_ACCOUNTS.includes(acc.name)) {
+        const hList = allocations[acc.name] || [];
+        let newCurrent = 0;
+        let newCurrentUsd = 0;
+        
+        hList.forEach(h => {
+          newCurrent += Number(h.currentValueKrw.replace(/,/g, ''));
+          const isUsd = (h.ticker && h.ticker !== 'UNKNOWN' && h.ticker !== 'KRW');
+          if (isUsd) newCurrentUsd += Number(h.currentValue.replace(/,/g, ''));
+        });
+        
+        const oldCurrent = Number(acc.current.replace(/,/g, ''));
+        const oldCurrentUsd = Number(acc.currentUsd.replace(/,/g, ''));
+        
+        totalCurrentDiff += (newCurrent - oldCurrent);
+        totalUsdDiff += (newCurrentUsd - oldCurrentUsd);
+        
+        const oldPrincipal = Number(acc.principal.replace(/,/g, ''));
+        const newProfit = newCurrent - oldPrincipal;
+        
+        acc.current = formatInt(newCurrent);
+        acc.currentUsd = formatUsd(newCurrentUsd);
+        acc.profit = formatInt(newProfit);
+        acc.returnRate = oldPrincipal > 0 ? ((newProfit / oldPrincipal) * 100).toFixed(2) + '%' : '0.00%';
+      }
+    });
+
+    details.forEach(d => {
+      if (DB_TARGET_ACCOUNTS.includes(d.name)) {
+        const accName = d.name;
+        let newCurrent = 0;
+        let newCurrentUsd = 0;
+        
+        (allocations[accName] || []).forEach(h => {
+          newCurrent += Number(h.currentValueKrw.replace(/,/g, ''));
+          const isUsd = (h.ticker && h.ticker !== 'UNKNOWN' && h.ticker !== 'KRW');
+          if (isUsd) newCurrentUsd += Number(h.currentValue.replace(/,/g, ''));
+        });
+        
+        const oldPrincipal = Number(d.investedKrw.replace(/,/g, ''));
+        const newProfit = newCurrent - oldPrincipal;
+        
+        d.current = formatInt(newCurrent);
+        if (newCurrentUsd > 0) d.currentUsd = formatUsd(newCurrentUsd);
+        d.profit = formatInt(newProfit);
+        d.returnRate = oldPrincipal > 0 ? ((newProfit / oldPrincipal) * 100).toFixed(2) + '%' : '0.00%';
+      }
+    });
+
+    const sumOldPrincipal = Number(summary.principal.replace(/,/g, ''));
+    const sumOldCurrent = Number(summary.current.replace(/,/g, ''));
+    const sumOldCurrentUsd = Number(summary.currentUsd.replace(/,/g, ''));
+    
+    const sumNewCurrent = sumOldCurrent + totalCurrentDiff;
+    const sumNewCurrentUsd = sumOldCurrentUsd + totalUsdDiff;
+    const sumNewProfit = sumNewCurrent - sumOldPrincipal;
+    
+    summary.current = formatInt(sumNewCurrent);
+    summary.currentUsd = formatUsd(sumNewCurrentUsd);
+    summary.profit = formatInt(sumNewProfit);
+    summary.returnRate = sumOldPrincipal > 0 ? ((sumNewProfit / sumOldPrincipal) * 100).toFixed(2) + '%' : '0.00%';
   }
 
   // 5. 월별평가액 파싱
