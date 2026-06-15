@@ -1,5 +1,9 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Landmark, ChevronRight } from "lucide-react";
+import { Landmark, ChevronRight, X, Save } from "lucide-react";
 import { Account } from "@/types/portfolio";
 
 const sortOrder = [
@@ -22,6 +26,41 @@ const accountMapping: Record<string, string> = {
 };
 
 export default function AccountList({ accounts }: { accounts: Account[] }) {
+  const router = useRouter();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editPrincipal, setEditPrincipal] = useState("");
+  const [editCurrent, setEditCurrent] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const openModal = (account: Account) => {
+    const parseNumStr = (val: string) => val ? val.replace(/[^0-9.-]+/g, "") : "";
+    setEditPrincipal(parseNumStr(account.principal));
+    setEditCurrent(parseNumStr(account.current));
+    setIsModalOpen(true);
+  };
+
+  const handleSave = async () => {
+    setIsSubmitting(true);
+    try {
+      const res = await fetch("/api/portfolio/dongmin-etc", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ principal: editPrincipal, current: editCurrent })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setIsModalOpen(false);
+        router.refresh();
+      } else {
+        alert(data.error || "저장에 실패했습니다.");
+      }
+    } catch (e) {
+      alert("오류가 발생했습니다.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="glass-card p-6 h-full flex flex-col">
       <div className="flex items-center justify-between mb-6">
@@ -81,6 +120,18 @@ export default function AccountList({ accounts }: { accounts: Account[] }) {
             );
           }
 
+          if (account.name === "동민기타") {
+            return (
+              <div 
+                key={index} 
+                onClick={() => openModal(account)}
+                className="flex items-center justify-between p-4 rounded-xl bg-white/5 hover:bg-white/10 hover:border-primary/30 transition-all border border-white/5 cursor-pointer active:scale-[0.98]"
+              >
+                {CardContent}
+              </div>
+            );
+          }
+
           return (
             <div 
               key={index} 
@@ -91,6 +142,67 @@ export default function AccountList({ accounts }: { accounts: Account[] }) {
           );
         })}
       </div>
+
+      {/* Edit Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+          <div className="glass-card w-full max-w-md p-6 relative border border-white/10 shadow-2xl">
+            <button 
+              onClick={() => setIsModalOpen(false)}
+              className="absolute top-4 right-4 p-2 text-muted-foreground hover:text-foreground bg-white/5 hover:bg-white/10 rounded-full transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <h3 className="text-xl font-bold mb-6 text-gradient">동민기타 자산 수정</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground mb-1">원금</label>
+                <input 
+                  type="number"
+                  value={editPrincipal}
+                  onChange={(e) => setEditPrincipal(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                  placeholder="예: 2500000"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground mb-1">현재가</label>
+                <input 
+                  type="number"
+                  value={editCurrent}
+                  onChange={(e) => setEditCurrent(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                  placeholder="예: 2700000"
+                />
+              </div>
+            </div>
+
+            <div className="mt-8 flex gap-3">
+              <button 
+                onClick={() => setIsModalOpen(false)}
+                className="flex-1 px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-foreground font-medium transition-all"
+              >
+                취소
+              </button>
+              <button 
+                onClick={handleSave}
+                disabled={isSubmitting}
+                className="flex-1 px-4 py-3 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {isSubmitting ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <Save className="w-5 h-5" />
+                    저장
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
