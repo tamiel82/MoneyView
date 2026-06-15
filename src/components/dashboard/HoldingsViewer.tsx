@@ -295,8 +295,8 @@ export default function HoldingsViewer({ allocations }: { allocations: Record<st
                 <div className="hidden md:grid grid-cols-12 gap-4 px-4 py-2 text-xs font-medium text-muted-foreground border-b border-white/5 mb-2">
                   <div className="col-span-3">종목 (티커)</div>
                   <div className="col-span-2 text-right">보유수량</div>
-                  <div className="col-span-2 text-right">매수평단가</div>
-                  <div className="col-span-3 text-right">현재가 / 평가액</div>
+                  <div className="col-span-3 text-right">현재가 / 평단가</div>
+                  <div className="col-span-2 text-right">평가액</div>
                   <div className="col-span-2 text-right">수익률</div>
                 </div>
 
@@ -359,19 +359,26 @@ export default function HoldingsViewer({ allocations }: { allocations: Record<st
                                 <span className="text-sm font-semibold text-primary">{detail.quantity !== "" ? detail.quantity : "-"}</span>
                               </div>
 
-                              {/* 3. Unit Price */}
-                              <div className="col-span-2 flex flex-row md:flex-col justify-between md:justify-center w-full md:text-right z-10">
-                                <span className="md:hidden text-xs text-muted-foreground">매수평단가:</span>
-                                <span className="text-sm font-medium">{detail.unitPrice !== "" ? formatCurrency(detail.unitPrice, isUsdAsset) : "-"}</span>
-                              </div>
-
-                              {/* 4. Current Price & Value */}
+                              {/* 3. Current Price / Unit Price */}
                               <div className="col-span-3 flex flex-row md:flex-col justify-between md:justify-center w-full md:text-right z-10">
-                                <span className="md:hidden text-xs text-muted-foreground">현재가 / 평가액:</span>
+                                <span className="md:hidden text-xs text-muted-foreground">현재가 / 평단가:</span>
                                 <div className="flex flex-col items-end">
                                   <span className="text-sm font-bold text-gradient">{detail.currentPrice !== "" ? formatCurrency(detail.currentPrice, isUsdAsset) : "-"}</span>
-                                  {displayTotalValue && displayTotalValue !== "" && (
-                                    <span className="text-xs text-muted-foreground">{displayTotalValue}</span>
+                                  <span className="text-xs text-muted-foreground">{detail.unitPrice !== "" ? formatCurrency(detail.unitPrice, isUsdAsset) : "-"}</span>
+                                </div>
+                              </div>
+
+                              {/* 4. Total Value */}
+                              <div className="col-span-2 flex flex-row md:flex-col justify-between md:justify-center w-full md:text-right z-10">
+                                <span className="md:hidden text-xs text-muted-foreground">평가액:</span>
+                                <div className="flex flex-col items-end">
+                                  {displayTotalValue && displayTotalValue !== "" ? (
+                                    <span className="text-sm font-semibold">{displayTotalValue}</span>
+                                  ) : (
+                                    <span className="text-sm font-semibold">-</span>
+                                  )}
+                                  {isUsdAsset && detail.currentValue && detail.currentValue !== "" && (
+                                    <span className="text-xs text-muted-foreground">{formatCurrency(detail.currentValue, true)}</span>
                                   )}
                                 </div>
                               </div>
