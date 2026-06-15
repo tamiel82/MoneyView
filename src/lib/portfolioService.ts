@@ -299,6 +299,7 @@ export async function getPortfolioData(): Promise<PortfolioData> {
       if (investedVal > 0) profitRateNum = (currentVal / investedVal) - 1;
 
       const formatNum = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 2 });
+      const formatKrw = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 0 });
       
       allocations[accName].push({
         rowIndex: h.row_index,
@@ -312,7 +313,7 @@ export async function getPortfolioData(): Promise<PortfolioData> {
         quantity: Number(h.quantity).toLocaleString('en-US', { maximumFractionDigits: 8 }),
         investedValue: formatNum(investedVal),
         currentValue: formatNum(currentVal),
-        currentValueKrw: formatNum(currentValKrw),
+        currentValueKrw: (accName === '현주주식' || accName === '동민주식') ? formatKrw(currentValKrw) : formatNum(currentValKrw),
         profitRate: (profitRateNum * 100).toFixed(2) + '%',
         weight: '0%', 
         currency: h.currency || (isUsd ? 'USD' : 'KRW'),
