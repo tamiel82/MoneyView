@@ -309,12 +309,13 @@ export async function getPortfolioData(): Promise<PortfolioData> {
         ticker: h.ticker || '',
         currentPrice: formatNum(currentPriceNum),
         unitPrice: formatNum(h.unit_price),
-        quantity: formatNum(h.quantity),
+        quantity: Number(h.quantity).toLocaleString('en-US', { maximumFractionDigits: 8 }),
         investedValue: formatNum(investedVal),
         currentValue: formatNum(currentVal),
         currentValueKrw: formatNum(currentValKrw),
         profitRate: (profitRateNum * 100).toFixed(2) + '%',
         weight: '0%', 
+        currency: h.currency || (isUsd ? 'USD' : 'KRW'),
       });
     }
 
