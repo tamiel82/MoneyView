@@ -215,10 +215,18 @@ export async function getPortfolioData(): Promise<PortfolioData> {
     }
   });
   
+  const accountIdMap: Record<number, string> = {
+    1: '현주주식',
+    2: '동민주식',
+    3: '현주절세',
+    4: '동민절세',
+    5: '동민코인'
+  };
+
   const { data: dbHoldings } = await supabase
     .from('holdings')
-    .select('*, accounts!inner(name)')
-    .in('accounts.name', DB_TARGET_ACCOUNTS)
+    .select('*')
+    .in('account_id', [1, 2, 3, 4, 5])
     .order('row_index', { ascending: true });
 
   if (dbHoldings) {
@@ -249,7 +257,9 @@ export async function getPortfolioData(): Promise<PortfolioData> {
     const exchangeRate = krwQuote?.regularMarketPrice || 1400;
 
     for (const h of dbHoldings) {
-      const accName = h.accounts.name;
+      const accName = accountIdMap[h.account_id];
+      if (!accName) continue;
+      
       if (!allocations[accName]) allocations[accName] = [];
       
       const isUsd = (h.ticker && h.ticker !== 'UNKNOWN' && h.ticker !== 'KRW');
@@ -291,6 +301,11 @@ export async function getPortfolioData(): Promise<PortfolioData> {
     
     const formatInt = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 0 });
     const formatUsd = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const parseCurrency = (val: string) => {
+      if (!val || typeof val !== 'string') return 0;
+      const num = Number(val.replace(/[^0-9.-]+/g, ''));
+      return isNaN(num) ? 0 : num;
+    };
 
     accounts.forEach(acc => {
       if (DB_TARGET_ACCOUNTS.includes(acc.name)) {
@@ -299,18 +314,18 @@ export async function getPortfolioData(): Promise<PortfolioData> {
         let newCurrentUsd = 0;
         
         hList.forEach(h => {
-          newCurrent += Number(h.currentValueKrw.replace(/,/g, ''));
+          newCurrent += parseCurrency(h.currentValueKrw);
           const isUsd = (h.ticker && h.ticker !== 'UNKNOWN' && h.ticker !== 'KRW');
-          if (isUsd) newCurrentUsd += Number(h.currentValue.replace(/,/g, ''));
+          if (isUsd) newCurrentUsd += parseCurrency(h.currentValue);
         });
         
-        const oldCurrent = Number(acc.current.replace(/,/g, ''));
-        const oldCurrentUsd = Number(acc.currentUsd.replace(/,/g, ''));
+        const oldCurrent = parseCurrency(acc.current);
+        const oldCurrentUsd = parseCurrency(acc.currentUsd);
         
         totalCurrentDiff += (newCurrent - oldCurrent);
         totalUsdDiff += (newCurrentUsd - oldCurrentUsd);
         
-        const oldPrincipal = Number(acc.principal.replace(/,/g, ''));
+        const oldPrincipal = parseCurrency(acc.principal);
         const newProfit = newCurrent - oldPrincipal;
         
         acc.current = formatInt(newCurrent);
@@ -327,12 +342,12 @@ export async function getPortfolioData(): Promise<PortfolioData> {
         let newCurrentUsd = 0;
         
         (allocations[accName] || []).forEach(h => {
-          newCurrent += Number(h.currentValueKrw.replace(/,/g, ''));
+          newCurrent += parseCurrency(h.currentValueKrw);
           const isUsd = (h.ticker && h.ticker !== 'UNKNOWN' && h.ticker !== 'KRW');
-          if (isUsd) newCurrentUsd += Number(h.currentValue.replace(/,/g, ''));
+          if (isUsd) newCurrentUsd += parseCurrency(h.currentValue);
         });
         
-        const oldPrincipal = Number(d.investedKrw.replace(/,/g, ''));
+        const oldPrincipal = parseCurrency(d.investedKrw);
         const newProfit = newCurrent - oldPrincipal;
         
         d.current = formatInt(newCurrent);
@@ -342,9 +357,9 @@ export async function getPortfolioData(): Promise<PortfolioData> {
       }
     });
 
-    const sumOldPrincipal = Number(summary.principal.replace(/,/g, ''));
-    const sumOldCurrent = Number(summary.current.replace(/,/g, ''));
-    const sumOldCurrentUsd = Number(summary.currentUsd.replace(/,/g, ''));
+    const sumOldPrincipal = parseCurrency(summary.principal);
+    const sumOldCurrent = parseCurrency(summary.current);
+    const sumOldCurrentUsd = parseCurrency(summary.currentUsd);
     
     const sumNewCurrent = sumOldCurrent + totalCurrentDiff;
     const sumNewCurrentUsd = sumOldCurrentUsd + totalUsdDiff;
