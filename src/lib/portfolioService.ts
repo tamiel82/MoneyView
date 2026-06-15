@@ -171,13 +171,26 @@ export async function getPortfolioData(): Promise<PortfolioData> {
   let currentAccountId = "";
   const DB_TARGET_ACCOUNTS = ['현주주식', '동민주식', '현주절세', '동민절세', '동민코인'];
 
+  const getCanonicalAccountName = (sheetHeaderName: string) => {
+    const map: Record<string, string> = {
+      '현주 위탁계좌': '현주주식',
+      '동민 위탁계좌': '동민주식',
+      '현주 절세계좌': '현주절세',
+      '동민 절세계좌': '동민절세',
+      '암호화폐': '동민코인',
+      '현금': '현금'
+    };
+    return map[sheetHeaderName] || sheetHeaderName;
+  };
+
   for (let i = 0; i < allocationRows.length; i++) {
     const row = allocationRows[i];
     if (!row) continue;
 
     // Detect Account Header
     if (row[1] && row[1] !== "자산" && row[1] !== "평가손익" && !row[6]) {
-       currentAccountId = row[1].trim();
+       const rawHeader = row[1].trim();
+       currentAccountId = getCanonicalAccountName(rawHeader);
        if (!allocations[currentAccountId]) {
          allocations[currentAccountId] = [];
        }
