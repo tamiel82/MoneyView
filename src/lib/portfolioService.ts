@@ -1,6 +1,7 @@
 import { google } from 'googleapis';
 import { PortfolioData } from '@/types/portfolio';
 import YahooFinance from 'yahoo-finance2';
+import { createClient } from '@supabase/supabase-js';
 const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
 
 export async function getPortfolioData(): Promise<PortfolioData> {
@@ -208,10 +209,9 @@ export async function getPortfolioData(): Promise<PortfolioData> {
   }
 
   // 4-1. Fetch Target Accounts from Supabase DB
-  const { createClient } = require('@supabase/supabase-js');
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
     global: {
-      fetch: (url: string, options: any) => fetch(url, { ...options, cache: 'no-store' })
+      fetch: (url: any, options: any) => fetch(url, { ...options, cache: 'no-store' })
     }
   });
   
@@ -234,12 +234,12 @@ export async function getPortfolioData(): Promise<PortfolioData> {
       return t.replace(/\./g, "-");
     };
 
-    const dbTickers = Array.from(new Set(dbHoldings.map(h => h.ticker).filter(t => t && t !== 'UNKNOWN' && t !== 'KRW' && t !== 'USD')));
+    const dbTickers: string[] = Array.from(new Set(dbHoldings.map((h: any) => h.ticker).filter((t: any) => typeof t === 'string' && t !== 'UNKNOWN' && t !== 'KRW' && t !== 'USD')));
     
     // Fetch quotes concurrently
-    const quotesArr = await Promise.allSettled(dbTickers.map(t => yahooFinance.quote(formatYahooTickerLocal(t))));
+    const quotesArr = await Promise.allSettled(dbTickers.map((t: any) => YahooFinance.quote(formatYahooTickerLocal(t))));
     const quotesMap: Record<string, number> = {};
-    quotesArr.forEach((res, i) => {
+    quotesArr.forEach((res: any, i: number) => {
       if (res.status === 'fulfilled' && res.value && res.value.regularMarketPrice) {
         quotesMap[dbTickers[i]] = res.value.regularMarketPrice;
       }
