@@ -242,6 +242,16 @@ export async function getPortfolioData(): Promise<PortfolioData> {
       return t.replace(/\./g, "-");
     };
 
+    const isUsdTicker = (ticker: string) => {
+      if (!ticker) return false;
+      const t = ticker.trim().toUpperCase();
+      if (t === 'USD') return true;
+      if (t === 'KRW' || t === 'UNKNOWN') return false;
+      if (/^\d{6}$/.test(t)) return false; 
+      if (/KRW$/.test(t)) return false; 
+      return true; 
+    };
+
     const dbTickers: string[] = Array.from(new Set(dbHoldings.map((h: any) => h.ticker).filter((t: any) => typeof t === 'string' && t !== 'UNKNOWN' && t !== 'KRW' && t !== 'USD')));
     
     // Fetch quotes concurrently
@@ -262,7 +272,7 @@ export async function getPortfolioData(): Promise<PortfolioData> {
       
       if (!allocations[accName]) allocations[accName] = [];
       
-      const isUsd = (h.ticker && h.ticker !== 'UNKNOWN' && h.ticker !== 'KRW');
+      const isUsd = isUsdTicker(h.ticker);
       let currentPriceNum = h.unit_price; 
       if (h.ticker === 'USD') currentPriceNum = exchangeRate;
       else if (quotesMap[h.ticker]) currentPriceNum = quotesMap[h.ticker];
@@ -315,7 +325,7 @@ export async function getPortfolioData(): Promise<PortfolioData> {
         
         hList.forEach(h => {
           newCurrent += parseCurrency(h.currentValueKrw);
-          const isUsd = (h.ticker && h.ticker !== 'UNKNOWN' && h.ticker !== 'KRW');
+          const isUsd = isUsdTicker(h.ticker);
           if (isUsd) newCurrentUsd += parseCurrency(h.currentValue);
         });
         
@@ -343,7 +353,7 @@ export async function getPortfolioData(): Promise<PortfolioData> {
         
         (allocations[accName] || []).forEach(h => {
           newCurrent += parseCurrency(h.currentValueKrw);
-          const isUsd = (h.ticker && h.ticker !== 'UNKNOWN' && h.ticker !== 'KRW');
+          const isUsd = isUsdTicker(h.ticker);
           if (isUsd) newCurrentUsd += parseCurrency(h.currentValue);
         });
         
