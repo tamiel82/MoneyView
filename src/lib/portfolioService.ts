@@ -245,7 +245,7 @@ export async function getPortfolioData(): Promise<PortfolioData> {
     const dbTickers: string[] = Array.from(new Set(dbHoldings.map((h: any) => h.ticker).filter((t: any) => typeof t === 'string' && t !== 'UNKNOWN' && t !== 'KRW' && t !== 'USD')));
     
     // Fetch quotes concurrently
-    const quotesArr = await Promise.allSettled(dbTickers.map((t: any) => YahooFinance.quote(formatYahooTickerLocal(t))));
+    const quotesArr = await Promise.allSettled(dbTickers.map((t: any) => yahooFinance.quote(formatYahooTickerLocal(t))));
     const quotesMap: Record<string, number> = {};
     quotesArr.forEach((res: any, i: number) => {
       if (res.status === 'fulfilled' && res.value && res.value.regularMarketPrice) {
