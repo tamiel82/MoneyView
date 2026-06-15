@@ -57,17 +57,24 @@ export default function AssetSummary({ summary }: { summary: PortfolioSummary })
     return isPos && !val.includes("+") ? `+${val.trim()}` : val.trim();
   };
 
-  const isDdNegative = summary.drawdown && summary.drawdown.includes("-");
-  const isDdZero = !summary.drawdown || summary.drawdown === "0.0%" || summary.drawdown === "0%";
-  const isDdPositive = !isDdNegative && !isDdZero;
-  
-  const formattedDrawdown = formatPositive(summary.drawdown, isDdPositive);
   const diffVal = currentVal - athVal;
   const formattedDiff = diffVal === 0 
     ? "0" 
     : diffVal > 0 
       ? `+${diffVal.toLocaleString()}` 
       : diffVal.toLocaleString();
+
+  let formattedDrawdown = "0.0%";
+  if (athVal > 0) {
+    const drawdownPct = (diffVal / athVal) * 100;
+    if (drawdownPct === 0) {
+      formattedDrawdown = "0.0%";
+    } else if (drawdownPct > 0) {
+      formattedDrawdown = `+${drawdownPct.toFixed(1)}%`;
+    } else {
+      formattedDrawdown = `${drawdownPct.toFixed(1)}%`;
+    }
+  }
 
   return (
     <div className="glass-card p-6 h-full flex flex-col justify-between">
