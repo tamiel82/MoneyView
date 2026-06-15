@@ -28,12 +28,14 @@ const accountMapping: Record<string, string> = {
 export default function AccountList({ accounts }: { accounts: Account[] }) {
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editAccountName, setEditAccountName] = useState("");
   const [editPrincipal, setEditPrincipal] = useState("");
   const [editCurrent, setEditCurrent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const openModal = (account: Account) => {
     const parseNumStr = (val: string) => val ? val.replace(/[^0-9.-]+/g, "") : "";
+    setEditAccountName(account.name);
     setEditPrincipal(parseNumStr(account.principal));
     setEditCurrent(parseNumStr(account.current));
     setIsModalOpen(true);
@@ -42,10 +44,10 @@ export default function AccountList({ accounts }: { accounts: Account[] }) {
   const handleSave = async () => {
     setIsSubmitting(true);
     try {
-      const res = await fetch("/api/portfolio/dongmin-etc", {
+      const res = await fetch("/api/portfolio/update-account", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ principal: editPrincipal, current: editCurrent })
+        body: JSON.stringify({ accountName: editAccountName, principal: editPrincipal, current: editCurrent })
       });
       const data = await res.json();
       if (data.success) {
@@ -120,7 +122,7 @@ export default function AccountList({ accounts }: { accounts: Account[] }) {
             );
           }
 
-          if (account.name === "동민기타") {
+          if (account.name === "동민기타" || account.name === "현금") {
             return (
               <div 
                 key={index} 
@@ -153,7 +155,7 @@ export default function AccountList({ accounts }: { accounts: Account[] }) {
             >
               <X className="w-5 h-5" />
             </button>
-            <h3 className="text-xl font-bold mb-6 text-gradient">동민기타 자산 수정</h3>
+            <h3 className="text-xl font-bold mb-6 text-gradient">{editAccountName} 자산 수정</h3>
             
             <div className="space-y-4">
               <div>
@@ -162,7 +164,8 @@ export default function AccountList({ accounts }: { accounts: Account[] }) {
                   type="number"
                   value={editPrincipal}
                   onChange={(e) => setEditPrincipal(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                  disabled={editAccountName === "현금"}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   placeholder="예: 2500000"
                 />
               </div>
