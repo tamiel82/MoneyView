@@ -397,7 +397,7 @@ export async function getPortfolioData(): Promise<PortfolioData> {
       } else if (h.account_id === 3 || h.account_id === 4) {
         category = '절세';
         country = '한국';
-        name = '';
+        name = strategy; // name fallback to strategy
         groupKey = `절세_${strategy}`;
       } else if (h.account_id === 5) {
         category = '동민코인';
