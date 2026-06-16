@@ -146,7 +146,7 @@ export async function getPortfolioData(): Promise<PortfolioData> {
   }));
 
   // 3. 종목별 상세 현황 (Row 15~, index 14~)
-  const details = [];
+  let details = [];
   for (let i = 14; i < portfolioRows.length; i++) {
     const row = portfolioRows[i];
     if (!row || !row[0] || row[0] === '' || row[0] === '계좌' || row[0].includes('계좌')) continue;
@@ -360,26 +360,94 @@ export async function getPortfolioData(): Promise<PortfolioData> {
       }
     });
 
-    details.forEach(d => {
-      if (DB_TARGET_ACCOUNTS.includes(d.name)) {
-        const accName = d.name;
-        let newCurrent = 0;
-        let newCurrentUsd = 0;
-        
-        (allocations[accName] || []).forEach(h => {
-          newCurrent += parseCurrency(h.currentValueKrw);
-          const isUsd = isUsdTicker(h.ticker);
-          if (isUsd) newCurrentUsd += parseCurrency(h.currentValue);
-        });
-        
-        const oldPrincipal = parseCurrency(d.investedKrw);
-        const newProfit = newCurrent - oldPrincipal;
-        
-        d.current = formatInt(newCurrent);
-        if (newCurrentUsd > 0) d.currentUsd = formatUsd(newCurrentUsd);
-        d.profit = formatInt(newProfit);
-        d.returnRate = oldPrincipal > 0 ? ((newProfit / oldPrincipal) * 100).toFixed(2) + '%' : '0.00%';
+    // Rebuild details for DB categories
+    const dbDetails: any[] = [];
+    const groupedHoldings: Record<string, {
+      category: string,
+      name: string,
+      strategy: string,
+      country: string,
+      isUsd: boolean,
+      investedNative: number,
+      currentNative: number,
+      currentKrw: number
+    }> = {};
+
+    dbHoldings.forEach((h: any) => {
+      const isUsd = isUsdTicker(h.ticker) || h.currency === 'USD';
+      let currentPriceNum = h.unit_price; 
+      if (h.ticker === 'USD') currentPriceNum = exchangeRate;
+      else if (quotesMap[h.ticker]) currentPriceNum = quotesMap[h.ticker];
+
+      const invVal = h.unit_price * h.quantity;
+      const curVal = currentPriceNum * h.quantity;
+      const curValKrw = isUsd ? curVal * exchangeRate : curVal;
+
+      let category = '';
+      let groupKey = '';
+      let name = '';
+      let strategy = h.strategy || '';
+      let country = '';
+
+      if (h.account_id === 1 || h.account_id === 2) {
+        category = '주식';
+        country = '미국';
+        name = h.ticker;
+        groupKey = `주식_${name}`;
+      } else if (h.account_id === 3 || h.account_id === 4) {
+        category = '절세';
+        country = '한국';
+        name = '';
+        groupKey = `절세_${strategy}`;
+      } else if (h.account_id === 5) {
+        category = '동민코인';
+        country = '한국';
+        name = h.ticker;
+        groupKey = `동민코인_${name}`;
+      } else {
+        return;
       }
+
+      if (!groupedHoldings[groupKey]) {
+        groupedHoldings[groupKey] = {
+          category, name, strategy, country, isUsd,
+          investedNative: 0, currentNative: 0, currentKrw: 0
+        };
+      }
+      groupedHoldings[groupKey].investedNative += invVal;
+      groupedHoldings[groupKey].currentNative += curVal;
+      groupedHoldings[groupKey].currentKrw += curValKrw;
+    });
+
+    const formatPct = (n: number) => (n * 100).toFixed(1) + '%';
+    const formatCur = (n: number, isUsd: boolean) => isUsd ? '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '₩' + n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+
+    Object.values(groupedHoldings).forEach(g => {
+      const profit = g.currentNative - g.investedNative;
+      const returnRate = g.investedNative > 0 ? (profit / g.investedNative) : 0;
+      
+      const item: any = {
+        category: g.category,
+        name: g.name,
+        strategy: g.strategy,
+        country: g.country,
+        profit: formatCur(profit, g.isUsd),
+        returnRate: formatPct(returnRate),
+        _currentKrw: g.currentKrw // Temp for overallWeight
+      };
+
+      if (g.isUsd) {
+        item.investedUsd = formatCur(g.investedNative, true);
+        item.investedKrw = '';
+        item.currentUsd = formatCur(g.currentNative, true);
+        item.current = formatCur(g.currentKrw, false);
+      } else {
+        item.investedUsd = '';
+        item.investedKrw = formatCur(g.investedNative, false);
+        item.currentUsd = '';
+        item.current = formatCur(g.currentNative, false);
+      }
+      dbDetails.push(item);
     });
 
     const sumOldPrincipal = parseCurrency(summary.principal);
@@ -394,6 +462,17 @@ export async function getPortfolioData(): Promise<PortfolioData> {
     summary.currentUsd = formatUsd(sumNewCurrentUsd);
     summary.profit = formatInt(sumNewProfit);
     summary.returnRate = sumOldPrincipal > 0 ? ((sumNewProfit / sumOldPrincipal) * 100).toFixed(2) + '%' : '0.00%';
+
+    // Combine and calculate overallWeight
+    dbDetails.forEach(d => {
+      d.overallWeight = sumNewCurrent > 0 ? formatPct(d._currentKrw / sumNewCurrent) : '0%';
+    });
+    const sheetDetails = details.filter(d => !['주식', '절세', '동민코인'].includes(d.category));
+    details = [...dbDetails, ...sheetDetails].sort((a, b) => {
+      const wA = parseFloat(a.overallWeight || '0');
+      const wB = parseFloat(b.overallWeight || '0');
+      return wB - wA; // descending
+    });
   }
 
   // 5. 월별평가액 파싱
