@@ -468,7 +468,15 @@ export async function getPortfolioData(): Promise<PortfolioData> {
       d.overallWeight = sumNewCurrent > 0 ? formatPct(d._currentKrw / sumNewCurrent) : '0%';
     });
     const sheetDetails = details.filter(d => !['주식', '절세', '동민코인'].includes(d.category));
+    const categoryOrder = ['주식', '절세', '동민코인', '동민기타', '채원주식'];
     details = [...dbDetails, ...sheetDetails].sort((a, b) => {
+      const idxA = categoryOrder.indexOf(a.category);
+      const idxB = categoryOrder.indexOf(b.category);
+      const orderA = idxA !== -1 ? idxA : 999;
+      const orderB = idxB !== -1 ? idxB : 999;
+      if (orderA !== orderB) {
+        return orderA - orderB;
+      }
       const wA = parseFloat(a.overallWeight || '0');
       const wB = parseFloat(b.overallWeight || '0');
       return wB - wA; // descending
@@ -611,6 +619,13 @@ export async function getPortfolioData(): Promise<PortfolioData> {
         ...h,
         history: tickerCharts[formatted] || []
       };
+    });
+
+    // Sort items within account by evaluation amount (currentValueKrw) descending
+    allocations[accountId].sort((a, b) => {
+      const valA = parseFloat(String(a.currentValueKrw || '0').replace(/[^0-9.-]+/g, ''));
+      const valB = parseFloat(String(b.currentValueKrw || '0').replace(/[^0-9.-]+/g, ''));
+      return valB - valA;
     });
   });
 
