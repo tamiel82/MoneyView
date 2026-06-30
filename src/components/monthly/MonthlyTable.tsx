@@ -127,18 +127,10 @@ export default function MonthlyTable({ data }: { data: MonthlyData[] }) {
     e.preventDefault();
     if (!editRow || isSubmitting) return;
 
-    const parsedDeposits = editDeposits.map(d => parseFloat(d));
-    if (parsedDeposits.some(d => isNaN(d))) {
-      alert("적립액에 올바른 숫자 값을 입력해 주세요.");
-      return;
-    }
+    const parsedDeposits = editDeposits.map(d => d.trim() === "" ? "0" : d.trim());
+    const parsedValuations = editValuations.map(v => v.trim());
 
-    // Convert valuations: blank becomes empty string, others become float numbers
-    const parsedValuations = editValuations.map(v => {
-      if (v.trim() === "") return "";
-      const num = parseFloat(v);
-      return isNaN(num) ? "" : num;
-    });
+
 
     setIsSubmitting(true);
     try {
@@ -194,18 +186,10 @@ export default function MonthlyTable({ data }: { data: MonthlyData[] }) {
     const month = dateMatch[2].padStart(2, '0');
     const normalizedMonth = `${year}. ${month}. `;
 
-    const parsedDeposits = newDeposits.map(d => parseFloat(d));
-    if (parsedDeposits.some(d => isNaN(d))) {
-      alert("적립액에 올바른 숫자 값을 입력해 주세요.");
-      return;
-    }
+    const parsedDeposits = newDeposits.map(d => d.trim() === "" ? "0" : d.trim());
+    const parsedValuations = newValuations.map(v => v.trim());
 
-    // Convert valuations: blank becomes empty string, others become float numbers
-    const parsedValuations = newValuations.map(v => {
-      if (v.trim() === "") return "";
-      const num = parseFloat(v);
-      return isNaN(num) ? "" : num;
-    });
+
 
     setIsSubmitting(true);
     try {
@@ -233,6 +217,20 @@ export default function MonthlyTable({ data }: { data: MonthlyData[] }) {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const evaluateMath = (expr: string) => {
+    if (!expr) return "";
+    try {
+      const cleanExpr = expr.replace(/,/g, '').replace(/^=/, '');
+      if (/[+\-*/]/.test(cleanExpr) && /^[0-9+\-*/().\s]+$/.test(cleanExpr)) {
+        const result = new Function(`return ${cleanExpr}`)();
+        if (typeof result === 'number' && !isNaN(result) && result !== Infinity) {
+          return `= ${result.toLocaleString()}`;
+        }
+      }
+    } catch (e) {}
+    return "";
   };
 
   return (
@@ -432,10 +430,10 @@ export default function MonthlyTable({ data }: { data: MonthlyData[] }) {
                     <div key={idx} className="bg-white/2 p-3 rounded-xl border border-white/5 space-y-2">
                       <h5 className="text-xs font-bold text-primary">{name}</h5>
                       <div className="grid grid-cols-2 gap-2">
-                        <div>
+                        <div className="relative">
                           <label className="block text-[10px] text-muted-foreground uppercase mb-0.5">적립액</label>
                           <input 
-                            type="number" 
+                            type="text" 
                             value={editDeposits[idx]}
                             onChange={(e) => {
                               const updated = [...editDeposits];
@@ -445,11 +443,16 @@ export default function MonthlyTable({ data }: { data: MonthlyData[] }) {
                             className="w-full bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary/50"
                             required
                           />
+                          {evaluateMath(editDeposits[idx]) && (
+                            <span className="absolute right-2 top-6 text-[10px] text-blue-400 font-bold pointer-events-none">
+                              {evaluateMath(editDeposits[idx])}
+                            </span>
+                          )}
                         </div>
-                        <div>
+                        <div className="relative">
                           <label className="block text-[10px] text-muted-foreground uppercase mb-0.5">평가액</label>
                           <input 
-                            type="number" 
+                            type="text" 
                             placeholder=""
                             value={editValuations[idx]}
                             onChange={(e) => {
@@ -459,6 +462,11 @@ export default function MonthlyTable({ data }: { data: MonthlyData[] }) {
                             }}
                             className="w-full bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary/50"
                           />
+                          {evaluateMath(editValuations[idx]) && (
+                            <span className="absolute right-2 top-6 text-[10px] text-blue-400 font-bold pointer-events-none">
+                              {evaluateMath(editValuations[idx])}
+                            </span>
+                          )}
                         </div>
                         <div className="col-span-2">
                           <label className="block text-[10px] text-muted-foreground uppercase mb-0.5">메모</label>
@@ -539,10 +547,10 @@ export default function MonthlyTable({ data }: { data: MonthlyData[] }) {
                     <div key={idx} className="bg-white/2 p-3 rounded-xl border border-white/5 space-y-2">
                       <h5 className="text-xs font-bold text-primary">{name}</h5>
                       <div className="grid grid-cols-2 gap-2">
-                        <div>
+                        <div className="relative">
                           <label className="block text-[10px] text-muted-foreground uppercase mb-0.5">적립액</label>
                           <input 
-                            type="number" 
+                            type="text" 
                             value={newDeposits[idx]}
                             onChange={(e) => {
                               const updated = [...newDeposits];
@@ -552,11 +560,16 @@ export default function MonthlyTable({ data }: { data: MonthlyData[] }) {
                             className="w-full bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary/50"
                             required
                           />
+                          {evaluateMath(newDeposits[idx]) && (
+                            <span className="absolute right-2 top-6 text-[10px] text-blue-400 font-bold pointer-events-none">
+                              {evaluateMath(newDeposits[idx])}
+                            </span>
+                          )}
                         </div>
-                        <div>
+                        <div className="relative">
                           <label className="block text-[10px] text-muted-foreground uppercase mb-0.5">평가액</label>
                           <input 
-                            type="number" 
+                            type="text" 
                             placeholder=""
                             value={newValuations[idx]}
                             onChange={(e) => {
@@ -566,6 +579,11 @@ export default function MonthlyTable({ data }: { data: MonthlyData[] }) {
                             }}
                             className="w-full bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary/50"
                           />
+                          {evaluateMath(newValuations[idx]) && (
+                            <span className="absolute right-2 top-6 text-[10px] text-blue-400 font-bold pointer-events-none">
+                              {evaluateMath(newValuations[idx])}
+                            </span>
+                          )}
                         </div>
                         <div className="col-span-2">
                           <label className="block text-[10px] text-muted-foreground uppercase mb-0.5">메모</label>

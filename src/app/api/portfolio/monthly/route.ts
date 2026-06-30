@@ -31,8 +31,22 @@ export async function PUT(request: Request) {
 
     const sheets = google.sheets({ version: 'v4', auth });
 
-    const parsedDeposits = deposits.map((d: any) => d === "" || d === undefined ? 0 : Number(d));
-    const parsedValuations = valuations.map((v: any) => v === "" || v === undefined ? "" : Number(v));
+    const parseFormulaOrNumber = (val: any) => {
+      if (val === "" || val === undefined || val === null) return "";
+      if (typeof val === 'string') {
+        const clean = val.replace(/,/g, '');
+        if (/[+\-*/]/.test(clean) && !isalpha(clean)) {
+          return clean.startsWith('=') ? clean : `=${clean}`;
+        }
+        return isNaN(Number(clean)) ? val : Number(clean);
+      }
+      return Number(val);
+    };
+
+    const isalpha = (str: string) => /[a-zA-Z가-힣]/.test(str);
+
+    const parsedDeposits = deposits.map((d: any) => parseFormulaOrNumber(d) || 0);
+    const parsedValuations = valuations.map((v: any) => parseFormulaOrNumber(v));
 
     // 1. Update Cell Values
     await sheets.spreadsheets.values.batchUpdate({
@@ -137,12 +151,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '이미 존재하는 평가월입니다.' }, { status: 400 });
     }
 
+    const parseFormulaOrNumber = (val: any) => {
+      if (val === "" || val === undefined || val === null) return "";
+      if (typeof val === 'string') {
+        const clean = val.replace(/,/g, '');
+        if (/[+\-*/]/.test(clean) && !/[a-zA-Z가-힣]/.test(clean)) {
+          return clean.startsWith('=') ? clean : `=${clean}`;
+        }
+        return isNaN(Number(clean)) ? val : Number(clean);
+      }
+      return Number(val);
+    };
+
     // 2. Generate detailed formulas for index r (referencing r-1 for history)
     const rowValues = [
       month.trim(), // Column A
-      ...deposits.map((d: any) => d === "" || d === undefined ? 0 : Number(d)), // Columns B to H (Deposits)
+      ...deposits.map((d: any) => parseFormulaOrNumber(d) || 0), // Columns B to H (Deposits)
       `=SUM(B${r}:H${r})`, // Column I (월 적립액 합계)
-      ...valuations.map((v: any) => v === "" || v === undefined ? "" : Number(v)), // Columns J to P (Valuations)
+      ...valuations.map((v: any) => parseFormulaOrNumber(v)), // Columns J to P (Valuations)
       `=SUM(J${r}:P${r})`, // Column Q (평가액 합계)
       "", // Column R (공란)
       `=J${r}-(J${r-1}+B${r})`, // Column S (현금 월별손익)
