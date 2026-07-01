@@ -185,6 +185,7 @@ export default function MonthlyTable({ data }: { data: MonthlyData[] }) {
     const year = dateMatch[1];
     const month = dateMatch[2].padStart(2, '0');
     const normalizedMonth = `${year}. ${month}. `;
+    const dateValue = `${year}-${month}-01`;
 
     const parsedDeposits = newDeposits.map(d => d.trim() === "" ? "0" : d.trim());
     const parsedValuations = newValuations.map(v => v.trim());
@@ -198,6 +199,7 @@ export default function MonthlyTable({ data }: { data: MonthlyData[] }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           month: normalizedMonth,
+          dateValue: dateValue,
           deposits: parsedDeposits,
           valuations: parsedValuations,
           notes: newNotes,

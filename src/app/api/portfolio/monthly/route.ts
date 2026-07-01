@@ -112,7 +112,7 @@ export async function PUT(request: Request) {
 // POST: Add new month row (prefilled deposits, blank valuations, complete formula matrix)
 export async function POST(request: Request) {
   try {
-    const { month, deposits, valuations, notes } = await request.json();
+    const { month, dateValue, deposits, valuations, notes } = await request.json();
 
     if (!month || !deposits || !valuations || deposits.length !== 7 || valuations.length !== 7 || !notes || notes.length !== 7) {
       return NextResponse.json({ error: 'month, 7 deposits, 7 valuations, and 7 notes are required' }, { status: 400 });
@@ -165,7 +165,7 @@ export async function POST(request: Request) {
 
     // 2. Generate detailed formulas for index r (referencing r-1 for history)
     const rowValues = [
-      month.trim(), // Column A
+      dateValue || month.trim(), // Column A
       ...deposits.map((d: any) => parseFormulaOrNumber(d) || 0), // Columns B to H (Deposits)
       `=SUM(B${r}:H${r})`, // Column I (월 적립액 합계)
       ...valuations.map((v: any) => parseFormulaOrNumber(v)), // Columns J to P (Valuations)
