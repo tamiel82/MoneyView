@@ -85,11 +85,11 @@ export async function GET(req: NextRequest) {
       
       if (search) {
         query = query.or(`content.ilike.%${search}%,merchant.ilike.%${search}%,note.ilike.%${search}%,category.ilike.%${search}%,paymentMethod.ilike.%${search}%,businessNum.ilike.%${search}%`)
-                     .order('date', { ascending: false });
+                     .order('date', { ascending: false }).order('id', { ascending: false });
       } else if (month) {
-        query = query.like('date', `${month}-%`).order('date', { ascending: false });
+        query = query.like('date', `${month}-%`).order('date', { ascending: false }).order('id', { ascending: false });
       } else {
-        query = query.order('date', { ascending: false });
+        query = query.order('date', { ascending: false }).order('id', { ascending: false });
       }
       promises.push(query);
     }

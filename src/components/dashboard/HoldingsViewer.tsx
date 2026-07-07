@@ -6,7 +6,7 @@ import { AllocationHolding } from "@/types/portfolio";
 import { Landmark, ChevronDown, ChevronUp, TrendingUp, TrendingDown, Layers, Plus, X, Loader2 } from "lucide-react";
 import { AreaChart, Area, ResponsiveContainer, YAxis } from "recharts";
 
-export default function HoldingsViewer({ allocations }: { allocations: Record<string, AllocationHolding[]> }) {
+export default function HoldingsViewer({ allocations, accounts = [] }: { allocations: Record<string, AllocationHolding[]>, accounts?: any[] }) {
   const router = useRouter();
   const accountNames = Object.keys(allocations);
 
@@ -199,7 +199,7 @@ export default function HoldingsViewer({ allocations }: { allocations: Record<st
     
     // Find the holdings within this sub-account to find "예수금" or get the insertion boundary
     const subDetails = accountDetails.filter(h => h.subAccount === subAccount.trim());
-    const cashHolding = subDetails.find(h => h.name === "예수금");
+    const cashHolding = subDetails.find(h => h.name === "예수금" || h.ticker === "USDT");
     
     let insertRowIndex = 0;
     if (cashHolding && cashHolding.rowIndex) {
@@ -260,6 +260,12 @@ export default function HoldingsViewer({ allocations }: { allocations: Record<st
         if (accountDetails.length === 0) return null;
         
         const isOpen = openAccounts[accountName];
+        
+        const accountSummary = accounts.find(a => a.name === accountName);
+        const currentVal = accountSummary ? accountSummary.current : "";
+        const returnRate = accountSummary ? accountSummary.returnRate : "";
+        const isPositive = returnRate && !returnRate.includes("-") && returnRate !== "0.00%" && returnRate !== "0%";
+        const isNegative = returnRate && returnRate.includes("-");
 
         return (
           <div 
@@ -272,8 +278,8 @@ export default function HoldingsViewer({ allocations }: { allocations: Record<st
               className="flex items-center justify-between p-5 cursor-pointer hover:bg-white/5 transition-colors"
               onClick={() => toggleAccount(accountName)}
             >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+              <div className="flex flex-1 items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary shrink-0">
                   <Landmark className="w-5 h-5" />
                 </div>
                 <div>
@@ -281,6 +287,19 @@ export default function HoldingsViewer({ allocations }: { allocations: Record<st
                   <p className="text-xs text-muted-foreground">{accountDetails.length}개 종목 보유</p>
                 </div>
               </div>
+              
+              {accountSummary && currentVal && (
+                <div className="flex flex-col items-end mr-4">
+                  <span className="font-bold text-base">₩{currentVal}</span>
+                  <div className="flex items-center gap-1">
+                    {isPositive && <TrendingUp className="w-3 h-3 text-red-500" />}
+                    {isNegative && <TrendingDown className="w-3 h-3 text-blue-500" />}
+                    <span className={`text-xs font-semibold ${isPositive ? "text-red-500" : isNegative ? "text-blue-500" : "text-muted-foreground"}`}>
+                      {returnRate !== "" ? (isPositive && !returnRate.includes("+") ? `+${returnRate}` : returnRate) : "-"}
+                    </span>
+                  </div>
+                </div>
+              )}
               
               <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
                 <div className="text-muted-foreground cursor-pointer p-1" onClick={() => toggleAccount(accountName)}>
@@ -362,10 +381,16 @@ export default function HoldingsViewer({ allocations }: { allocations: Record<st
                               {/* 3. Current Price / Unit Price */}
                               <div className="col-span-3 flex flex-row md:flex-col justify-between md:justify-center w-full md:text-right z-10">
                                 <span className="md:hidden text-xs text-muted-foreground">현재가 / 평단가:</span>
-                                <div className="flex flex-col items-end">
-                                  <span className="text-sm font-bold text-gradient">{detail.currentPrice !== "" ? formatCurrency(detail.currentPrice, isUsdAsset) : "-"}</span>
-                                  <span className="text-xs text-muted-foreground">{detail.unitPrice !== "" ? formatCurrency(detail.unitPrice, isUsdAsset) : "-"}</span>
-                                </div>
+                                {detail.name !== "예수금" && detail.ticker !== "USDT" ? (
+                                  <div className="flex flex-col items-end">
+                                    <span className="text-sm font-bold text-gradient">{detail.currentPrice !== "" ? formatCurrency(detail.currentPrice, isUsdAsset) : "-"}</span>
+                                    <span className="text-xs text-muted-foreground">{detail.unitPrice !== "" ? formatCurrency(detail.unitPrice, isUsdAsset) : "-"}</span>
+                                  </div>
+                                ) : (
+                                  <div className="flex flex-col items-end">
+                                    <span className="text-sm font-bold text-muted-foreground">-</span>
+                                  </div>
+                                )}
                               </div>
 
                               {/* 4. Total Value */}
@@ -387,13 +412,17 @@ export default function HoldingsViewer({ allocations }: { allocations: Record<st
                               <div className="col-span-2 flex flex-row md:flex-col justify-between md:justify-center w-full md:items-end z-10">
                                 <span className="md:hidden text-xs text-muted-foreground">수익률:</span>
                                 <div className="flex items-center gap-2">
-                                  <div className="flex items-center gap-1">
-                                    {isPositive && <TrendingUp className="w-3 h-3 text-red-500" />}
-                                    {isNegative && <TrendingDown className="w-3 h-3 text-blue-500" />}
-                                    <span className={`text-sm font-semibold ${isPositive ? "text-red-500" : isNegative ? "text-blue-500" : "text-muted-foreground"}`}>
-                                      {detail.profitRate !== "" ? (isPositive && !detail.profitRate.includes("+") ? `+${detail.profitRate}` : detail.profitRate) : "-"}
-                                    </span>
-                                  </div>
+                                  {detail.name !== "예수금" && detail.ticker !== "USDT" ? (
+                                    <div className="flex items-center gap-1">
+                                      {isPositive && <TrendingUp className="w-3 h-3 text-red-500" />}
+                                      {isNegative && <TrendingDown className="w-3 h-3 text-blue-500" />}
+                                      <span className={`text-sm font-semibold ${isPositive ? "text-red-500" : isNegative ? "text-blue-500" : "text-muted-foreground"}`}>
+                                        {detail.profitRate !== "" ? (isPositive && !detail.profitRate.includes("+") ? `+${detail.profitRate}` : detail.profitRate) : "-"}
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-sm font-semibold text-muted-foreground">-</span>
+                                  )}
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
@@ -486,7 +515,9 @@ export default function HoldingsViewer({ allocations }: { allocations: Record<st
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase">매수평단가</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase">
+                  {editHolding.name === "예수금" || editHolding.ticker === "USDT" ? "평가액" : "매수평단가"}
+                </label>
                 <input 
                   type="number" 
                   step="any"
@@ -647,7 +678,9 @@ export default function HoldingsViewer({ allocations }: { allocations: Record<st
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase">매수가 (단가)</label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase">
+                    {name === "예수금" || ticker === "USDT" ? "평가액" : "매수가 (단가)"}
+                  </label>
                   <input 
                     type="number" 
                     step="any"

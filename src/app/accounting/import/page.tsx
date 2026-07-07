@@ -205,7 +205,7 @@ export default function ImportPage() {
   const handleFillBusiness = () => {
     let filledCount = 0;
     const newTransactions = transactions.map(tx => {
-      if (tx.category === '사업지출' && !tx.businessNum) {
+      if (['사업지출', '사업소득'].includes(tx.category) && !tx.businessNum) {
         if (tx.paymentMethod?.startsWith('현주')) {
           filledCount++;
           return { ...tx, businessNum: '더엠제이' };
@@ -252,7 +252,7 @@ export default function ImportPage() {
     }
 
     if (showUnmatchedBusiness) {
-      result = result.filter(tx => tx.category === '사업지출' && !tx.businessNum);
+      result = result.filter(tx => ['사업지출', '사업소득'].includes(tx.category) && !tx.businessNum);
     }
 
     if (filterText) {
@@ -398,7 +398,7 @@ export default function ImportPage() {
               <p className="text-sm text-muted-foreground mt-1">
                 총 <span className="font-medium text-foreground">{parsedData.totalRows}건</span> 중 
                 <span className="text-orange-400 font-medium ml-1">{transactions.filter(t => !t.category || t.category === '미분류').length}건 미분류</span>, 
-                <span className="text-rose-400 font-medium ml-1">{transactions.filter(t => t.category === '사업지출' && !t.businessNum).length}건 사업자 미매칭</span>
+                <span className="text-rose-400 font-medium ml-1">{transactions.filter(t => ['사업지출', '사업소득'].includes(t.category) && !t.businessNum).length}건 사업자 미매칭</span>
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
@@ -517,7 +517,7 @@ export default function ImportPage() {
                   {filteredAndSortedTransactions.map((tx) => {
                     const isEditing = editingId === tx.id;
                     const isUnclassified = !tx.category || tx.category === '미분류';
-                    const isUnmatchedBusiness = tx.category === '사업지출' && !tx.businessNum;
+                    const isUnmatchedBusiness = ['사업지출', '사업소득'].includes(tx.category) && !tx.businessNum;
 
                     if (isEditing) {
                       return (
@@ -596,8 +596,8 @@ export default function ImportPage() {
                           />
                         </td>
                         <td className="px-3 py-3 whitespace-nowrap text-muted-foreground">{tx.date}</td>
-                        <td className="px-3 py-3">
-                          <span className={`px-2 py-1 rounded text-[10px] font-semibold ${tx.type === 'INCOME' ? 'bg-blue-500/20 text-blue-400' : 'bg-rose-500/20 text-rose-400'}`}>
+                        <td className="px-3 py-3 whitespace-nowrap">
+                          <span className={`px-2 py-1 rounded text-[10px] font-semibold whitespace-nowrap ${tx.type === 'INCOME' ? 'bg-blue-500/20 text-blue-400' : 'bg-rose-500/20 text-rose-400'}`}>
                             {tx.type === 'INCOME' ? '수입' : '지출'}
                           </span>
                         </td>

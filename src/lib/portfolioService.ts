@@ -265,7 +265,7 @@ export async function getPortfolioData(): Promise<PortfolioData> {
       return true; 
     };
 
-    const dbTickers: string[] = Array.from(new Set(dbHoldings.map((h: any) => h.ticker).filter((t: any) => typeof t === 'string' && t !== 'UNKNOWN' && t !== 'KRW' && t !== 'USD')));
+    const dbTickers: string[] = Array.from(new Set(dbHoldings.map((h: any) => h.ticker).filter((t: any) => typeof t === 'string' && t !== 'UNKNOWN' && t !== 'KRW' && t !== 'USD' && t !== 'USDT' && t !== 'USDC')));
     
     // Fetch quotes concurrently
     const quotesArr = await Promise.allSettled(dbTickers.map((t: any) => yahooFinance.quote(formatYahooTickerLocal(t))));
@@ -287,8 +287,7 @@ export async function getPortfolioData(): Promise<PortfolioData> {
       
       const isUsd = isUsdTicker(h.ticker);
       let currentPriceNum = h.unit_price; 
-      if (h.ticker === 'USD') currentPriceNum = exchangeRate;
-      else if (quotesMap[h.ticker]) currentPriceNum = quotesMap[h.ticker];
+      if (quotesMap[h.ticker]) currentPriceNum = quotesMap[h.ticker];
 
       const investedVal = h.unit_price * h.quantity;
       const currentVal = currentPriceNum * h.quantity;
@@ -376,8 +375,7 @@ export async function getPortfolioData(): Promise<PortfolioData> {
     dbHoldings.forEach((h: any) => {
       const isUsd = isUsdTicker(h.ticker) || h.currency === 'USD';
       let currentPriceNum = h.unit_price; 
-      if (h.ticker === 'USD') currentPriceNum = exchangeRate;
-      else if (quotesMap[h.ticker]) currentPriceNum = quotesMap[h.ticker];
+      if (quotesMap[h.ticker]) currentPriceNum = quotesMap[h.ticker];
 
       const invVal = h.unit_price * h.quantity;
       const curVal = currentPriceNum * h.quantity;

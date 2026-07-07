@@ -223,6 +223,92 @@ export async function POST(req: Request) {
           }
         }
 
+        else if (fileName.includes('우리카드')) {
+          const owner = fileName.includes('동민') ? '동민' : '현주';
+          const wb = xlsx.read(buffer, { type: 'buffer' });
+          const data: any[] = xlsx.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '' });
+
+          const isOverseas = fileName.includes('해외');
+          
+          let year = new Date().getFullYear();
+          const titleRowStr = String(data[0] && data[0].join(' '));
+          const yearMatch = titleRowStr.match(/\((\d{4})\./);
+          if (yearMatch) year = parseInt(yearMatch[1], 10);
+
+          if (!isOverseas) {
+            // 국내
+            let headerIdx = -1;
+            for (let i = 0; i < Math.min(10, data.length); i++) {
+              if (data[i] && data[i].includes('승인번호')) {
+                headerIdx = i;
+                break;
+              }
+            }
+            if (headerIdx !== -1) {
+              const headers = data[headerIdx];
+              for (let i = headerIdx + 1; i < data.length; i++) {
+                const row = data[i];
+                if (!row || row.length === 0) continue;
+                
+                const rowObj: any = {};
+                headers.forEach((h: string, idx: number) => {
+                  if (h) rowObj[h.trim()] = row[idx];
+                });
+
+                const 지출금액 = numOnly(rowObj['이용금액(원)']);
+                const 취소금액 = numOnly(rowObj['취소금액(원)']);
+                const 실제지출액 = 지출금액 - 취소금액;
+                
+                if (실제지출액 === 0 && 지출금액 === 0) continue;
+
+                let 결제일 = String(rowObj['이용일']).trim().split(' ')[0].replace(/\./g, '-');
+                if (결제일.split('-').length === 2) {
+                  결제일 = `${year}-${결제일}`;
+                }
+
+                const 지출내용 = String(rowObj['이용가맹점(은행)명']).trim();
+                const 결제수단 = `${owner}_우리카드`;
+                const 비고 = 취소금액 > 0 ? `취소금액: ${취소금액}` : '';
+
+                const cat = getCategory(지출내용);
+                const { 소비분류, 사업자, 매출처, 주문번호 } = applyBusinessAndCoupangLogic(결제일, 지출내용, 실제지출액, cat);
+
+                transactions.push({ 거래일: 결제일, 지출내용, 지출금액: 실제지출액, 소비분류, 매출처, 주문번호, 결제수단, 사업자, 비고 });
+              }
+            }
+          } else {
+            // 해외
+            for (let i = 0; i < data.length - 1; i++) {
+              const row1 = data[i];
+              if (!row1 || !row1[1] || typeof row1[1] !== 'string') continue;
+              
+              const isDate = /^\d{2}\.\d{2}$/.test(row1[1].trim());
+              if (isDate) {
+                const 결제일_mmdd = String(row1[1]).trim().replace(/\./g, '-');
+                const 결제일 = `${year}-${결제일_mmdd}`;
+                
+                const 지출내용 = String(row1[3]).trim();
+                
+                const 이용금액 = numOnly(row1[5]);
+                const 결제금액 = numOnly(row1[7]);
+                const 지출금액 = 결제금액 > 0 ? 결제금액 : 이용금액; // 결제금액(원)이 있으면 우선 사용
+                const 취소금액 = numOnly(row1[9]);
+                const 실제지출액 = 지출금액 - 취소금액;
+                
+                if (실제지출액 === 0 && 지출금액 === 0) continue;
+
+                const 결제수단 = `${owner}_우리카드`;
+                const 비고 = 취소금액 > 0 ? `취소금액: ${취소금액}` : '';
+
+                const cat = getCategory(지출내용);
+                const { 소비분류, 사업자, 매출처, 주문번호 } = applyBusinessAndCoupangLogic(결제일, 지출내용, 실제지출액, cat);
+
+                transactions.push({ 거래일: 결제일, 지출내용, 지출금액: 실제지출액, 소비분류, 매출처, 주문번호, 결제수단, 사업자, 비고 });
+              }
+            }
+          }
+        }
+
         else if (fileName.includes('우리')) {
           const owner = fileName.includes('동민') ? '동민' : '현주';
           const isMatong = fileName.includes('마통');

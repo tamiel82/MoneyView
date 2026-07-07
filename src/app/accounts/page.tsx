@@ -24,12 +24,12 @@ export default async function AccountsPage() {
     );
   }
 
-  const { allocations } = portfolioData;
+  const { allocations, accounts } = portfolioData;
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="min-h-[600px]">
-        <HoldingsViewer allocations={allocations} />
+        <HoldingsViewer allocations={allocations} accounts={accounts} />
       </div>
     </div>
   );

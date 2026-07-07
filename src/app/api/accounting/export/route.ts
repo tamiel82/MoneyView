@@ -31,6 +31,7 @@ export async function GET(req: NextRequest) {
           .select('*')
           .like('date', `${month}-%`)
           .order('date', { ascending: true })
+          .order('id', { ascending: true })
           .range(from, from + step - 1)
       );
     }
