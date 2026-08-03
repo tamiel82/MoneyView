@@ -161,8 +161,26 @@ export async function POST(request: Request) {
     }
     
     // Insert the new holding
-    const { data: accData } = await supabase.from('accounts').select('id').eq('name', addAccountName).single();
-    if (accData) {
+    const accountNameToIdMap: Record<string, number> = {
+      '현주주식': 1,
+      '현주 위탁계좌': 1,
+      '동민주식': 2,
+      '동민 위탁계좌': 2,
+      '현주절세': 3,
+      '현주 절세계좌': 3,
+      '동민절세': 4,
+      '동민 절세계좌': 4,
+      '동민코인': 5,
+      '암호화폐': 5
+    };
+
+    let targetAccountId = accountNameToIdMap[addAccountName];
+    if (!targetAccountId) {
+      const { data: accData } = await supabase.from('accounts').select('id').eq('name', addAccountName).single();
+      if (accData) targetAccountId = accData.id;
+    }
+
+    if (targetAccountId) {
       let cleanTicker = ticker.replace(/=HYPERLINK\(.*,"(.*)"\)/, "$1").trim();
       if (!cleanTicker) {
         if (name.includes('현금') || name.includes('원화')) cleanTicker = 'KRW';
@@ -170,7 +188,7 @@ export async function POST(request: Request) {
         else cleanTicker = 'UNKNOWN';
       }
       await supabase.from('holdings').insert({
-        account_id: accData.id,
+        account_id: targetAccountId,
         sub_account: subAccount,
         row_index: insertRowIndex,
         ticker: cleanTicker,
