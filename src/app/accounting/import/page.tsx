@@ -332,7 +332,7 @@ export default function ImportPage() {
     return result;
   }, [transactions, filterText, showUnclassified, showUnmatchedBusiness, sortConfig]);
 
-  const EXPENSE_CATEGORIES = ['사업지출', '사업세금', '기타경비', '음식', '물건', '몸', '취미', '경험', '관계', '기타', '관리비', '통신비', '교통비', '세금', '대출', '보험', '청약'];
+  const EXPENSE_CATEGORIES = ['사업지출', '사업세금', '기타경비', '음식', '물건', '몸', '취미', '경험', '관계', '교육', '기타', '관리비', '통신비', '교통비', '세금', '대출', '보험', '청약'];
   const INCOME_CATEGORIES = ['사업소득', '기타'];
 
   return (
@@ -774,7 +774,7 @@ export default function ImportPage() {
                     className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-primary w-[110px] sm:w-32"
                   >
                     <option value="" className="bg-black text-white">분류 변경안함</option>
-                    {['사업지출', '사업세금', '기타경비', '음식', '물건', '몸', '취미', '경험', '관계', '기타', '관리비', '통신비', '교통비', '세금', '대출', '보험', '청약', '사업소득'].map(cat => (
+                    {['사업지출', '사업세금', '기타경비', '음식', '물건', '몸', '취미', '경험', '관계', '교육', '기타', '관리비', '통신비', '교통비', '세금', '대출', '보험', '청약', '사업소득'].map(cat => (
                       <option key={cat} value={cat} className="bg-black text-white">{cat}</option>
                     ))}
                   </select>

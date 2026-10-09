@@ -17,7 +17,7 @@ interface TransactionGridProps {
 
 type SortConfig = { key: keyof Transaction | ''; direction: 'asc' | 'desc' };
 
-const EXPENSE_CATEGORIES = ['사업지출', '사업세금', '기타경비', '음식', '물건', '몸', '취미', '경험', '관계', '기타', '관리비', '통신비', '교통비', '세금', '대출', '보험', '청약'];
+const EXPENSE_CATEGORIES = ['사업지출', '사업세금', '기타경비', '음식', '물건', '몸', '취미', '경험', '관계', '교육', '기타', '관리비', '통신비', '교통비', '세금', '대출', '보험', '청약'];
 const INCOME_CATEGORIES = ['사업소득', '기타'];
 
 export default function TransactionGrid({ transactions, onRefresh, monthStr }: TransactionGridProps) {
