@@ -1,16 +1,61 @@
 'use client';
 
 import { useState, useRef, useMemo } from 'react';
-import { Upload, CheckCircle, Loader2, Save, ExternalLink, FileText, X as XIcon, Search, Filter, ArrowUpDown, Pencil, Trash2, Check } from 'lucide-react';
+import { Upload, CheckCircle, Loader2, Save, ExternalLink, FileText, X as XIcon, Search, Filter, ArrowUpDown, Pencil, Trash2, Check, Settings, ChevronDown, ChevronUp, CheckSquare, Square } from 'lucide-react';
 import { RawTransaction } from '@/lib/accounting/types';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+
+interface FinancialInstitution {
+  id: string;
+  name: string;
+  url: string;
+  defaultActive: boolean;
+}
+
+const FINANCIAL_INSTITUTIONS: FinancialInstitution[] = [
+  { id: 'shinhancard', name: '신한카드', url: 'https://www.shinhancard.com', defaultActive: true },
+  { id: 'hyundaicard', name: '현대카드', url: 'https://www.hyundaicard.com', defaultActive: true },
+  { id: 'wooricard', name: '우리카드', url: 'https://pc.wooricard.com/', defaultActive: true },
+  { id: 'lottecard', name: '롯데카드', url: 'https://www.lottecard.co.kr/', defaultActive: true },
+  { id: 'wooribank', name: '우리은행', url: 'https://www.wooribank.com', defaultActive: true },
+  { id: 'kbcard', name: 'KB국민카드', url: 'https://card.kbcard.com/', defaultActive: false },
+  { id: 'hanabank', name: '하나은행', url: 'https://www.kebhana.com', defaultActive: false },
+];
 
 export default function ImportPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [passwords, setPasswords] = useState({ dongmin: '820126', hyunjoo: '840416' });
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Financial Institution Management State
+  const [activeInstIds, setActiveInstIds] = useState<string[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('moneyview_active_institutions');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+    return FINANCIAL_INSTITUTIONS.filter(i => i.defaultActive).map(i => i.id);
+  });
+
+  const [isEditingInst, setIsEditingInst] = useState(false);
+  const [showInactiveInst, setShowInactiveInst] = useState(false);
+
+  const toggleInstActive = (id: string) => {
+    setActiveInstIds(prev => {
+      const next = prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('moneyview_active_institutions', JSON.stringify(next));
+      }
+      return next;
+    });
+  };
   
   type TxItem = RawTransaction & { id: string; category: string };
   const [transactions, setTransactions] = useState<TxItem[]>([]);
@@ -302,16 +347,105 @@ export default function ImportPage() {
 
       {/* 다운로드 링크 섹션 */}
       <div className="mb-8 p-6 glass-card shadow-sm rounded-xl border-white/10">
-        <h2 className="text-sm font-semibold text-foreground mb-4">거래내역 다운로드 바로가기</h2>
-        <div className="flex flex-wrap gap-3">
-          <a href="https://card.kbcard.com/" target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-white/5 border border-white/10 hover:bg-primary/20 hover:text-primary hover:border-primary/50 transition-colors text-muted-foreground">KB국민카드 <ExternalLink size={14} /></a>
-          <a href="https://www.shinhancard.com" target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-white/5 border border-white/10 hover:bg-primary/20 hover:text-primary hover:border-primary/50 transition-colors text-muted-foreground">신한카드 <ExternalLink size={14} /></a>
-          <a href="https://www.hyundaicard.com" target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-white/5 border border-white/10 hover:bg-primary/20 hover:text-primary hover:border-primary/50 transition-colors text-muted-foreground">현대카드 <ExternalLink size={14} /></a>
-          <a href="https://pc.wooricard.com/" target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-white/5 border border-white/10 hover:bg-primary/20 hover:text-primary hover:border-primary/50 transition-colors text-muted-foreground">우리카드 <ExternalLink size={14} /></a>
-          <a href="https://www.lottecard.co.kr/" target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-white/5 border border-white/10 hover:bg-primary/20 hover:text-primary hover:border-primary/50 transition-colors text-muted-foreground">롯데카드 <ExternalLink size={14} /></a>
-          <a href="https://www.wooribank.com" target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-white/5 border border-white/10 hover:bg-primary/20 hover:text-primary hover:border-primary/50 transition-colors text-muted-foreground">우리은행 <ExternalLink size={14} /></a>
-          <a href="https://www.kebhana.com" target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-white/5 border border-white/10 hover:bg-primary/20 hover:text-primary hover:border-primary/50 transition-colors text-muted-foreground">하나은행 <ExternalLink size={14} /></a>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+            거래내역 다운로드 바로가기
+            {isEditingInst && <span className="text-xs font-normal text-primary">(클릭하여 사용/미사용 설정)</span>}
+          </h2>
+          <button
+            onClick={() => setIsEditingInst(!isEditingInst)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
+              isEditingInst
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-white/5 border-white/10 hover:bg-white/10 text-muted-foreground'
+            }`}
+          >
+            <Settings size={14} />
+            {isEditingInst ? '설정 완료' : '기관 설정'}
+          </button>
         </div>
+
+        {isEditingInst ? (
+          /* 기관 설정 모드 */
+          <div className="space-y-4 animate-in fade-in duration-200">
+            <div>
+              <p className="text-xs text-muted-foreground mb-3">각 금융기관을 클릭하여 사용 중 / 미사용 상태를 전환하세요.</p>
+              <div className="flex flex-wrap gap-2.5">
+                {FINANCIAL_INSTITUTIONS.map((inst) => {
+                  const isActive = activeInstIds.includes(inst.id);
+                  return (
+                    <button
+                      key={inst.id}
+                      onClick={() => toggleInstActive(inst.id)}
+                      className={`flex items-center gap-2 px-3.5 py-2 text-sm font-medium rounded-lg border transition-all ${
+                        isActive
+                          ? 'bg-primary/20 text-primary border-primary/50 shadow-sm'
+                          : 'bg-white/5 text-muted-foreground/60 border-white/10 hover:bg-white/10'
+                      }`}
+                    >
+                      {isActive ? <CheckSquare size={16} className="text-primary" /> : <Square size={16} className="text-muted-foreground/50" />}
+                      <span>{inst.name}</span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${isActive ? 'bg-primary/30 text-primary' : 'bg-white/10 text-muted-foreground'}`}>
+                        {isActive ? '사용 중' : '미사용'}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* 평시 뷰 모드 */
+          <div className="space-y-4">
+            {/* 사용 중인 금융기관 */}
+            <div className="flex flex-wrap gap-3">
+              {FINANCIAL_INSTITUTIONS.filter(i => activeInstIds.includes(i.id)).map(inst => (
+                <a
+                  key={inst.id}
+                  href={inst.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-white/5 border border-white/10 hover:bg-primary/20 hover:text-primary hover:border-primary/50 transition-colors text-muted-foreground"
+                >
+                  {inst.name} <ExternalLink size={14} />
+                </a>
+              ))}
+
+              {FINANCIAL_INSTITUTIONS.filter(i => activeInstIds.includes(i.id)).length === 0 && (
+                <p className="text-xs text-muted-foreground py-1">사용 중으로 설정된 금융기관이 없습니다. [기관 설정]에서 추가해보세요.</p>
+              )}
+            </div>
+
+            {/* 미사용 금융기관 (접기/펴기) */}
+            {FINANCIAL_INSTITUTIONS.some(i => !activeInstIds.includes(i.id)) && (
+              <div className="pt-2 border-t border-white/5">
+                <button
+                  onClick={() => setShowInactiveInst(!showInactiveInst)}
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground/70 hover:text-foreground transition-colors font-medium py-1"
+                >
+                  {showInactiveInst ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                  <span>미사용 금융기관 ({FINANCIAL_INSTITUTIONS.filter(i => !activeInstIds.includes(i.id)).length}개)</span>
+                </button>
+
+                {showInactiveInst && (
+                  <div className="flex flex-wrap gap-2.5 mt-3 animate-in slide-in-from-top-2 duration-200">
+                    {FINANCIAL_INSTITUTIONS.filter(i => !activeInstIds.includes(i.id)).map(inst => (
+                      <a
+                        key={inst.id}
+                        href={inst.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 text-muted-foreground/60 hover:text-foreground transition-colors"
+                      >
+                        {inst.name} <ExternalLink size={12} />
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {transactions.length === 0 && !isUploading && (
