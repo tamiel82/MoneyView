@@ -246,12 +246,64 @@ export const HyundaiCardParser: BankParser = {
   }
 };
 
+export const LotteCardParser: BankParser = {
+  name: '롯데카드',
+  canParse: (headers) => headers.includes('이용가맹점') && (headers.includes('이용카드') || headers.includes('온누리상품권사용금액')),
+  parse: (data) => {
+    const result: ParseResult = { transactions: [] };
+    const headerRowIdx = data.findIndex(row => row.includes('이용가맹점') || row.includes('이용일자'));
+    if (headerRowIdx === -1) return result;
+
+    const headers = data[headerRowIdx];
+    const dateIdx = headers.indexOf('이용일자');
+    const merchantIdx = headers.indexOf('이용가맹점');
+    const amountIdx = headers.indexOf('이용금액');
+    const cancelAmountIdx = headers.indexOf('취소금액');
+    const cancelStatusIdx = headers.indexOf('취소여부');
+    const cardNameIdx = headers.indexOf('이용카드');
+
+    for (let i = headerRowIdx + 1; i < data.length; i++) {
+      const row = data[i];
+      if (!row || row.length < 5) continue;
+
+      const dateRaw = row[dateIdx];
+      if (!dateRaw) continue;
+
+      const amount = parseAmount(row[amountIdx]);
+      const cancelAmount = parseAmount(row[cancelAmountIdx]);
+      const cancelStatus = String(row[cancelStatusIdx] || '').trim();
+      const actualAmount = amount - cancelAmount;
+
+      if (actualAmount <= 0 && amount <= 0) continue;
+      if ((cancelStatus === 'Y' || cancelStatus === '취소') && (cancelAmount === amount || cancelAmount === 0)) continue;
+
+      const cardName = String(row[cardNameIdx] || '').trim();
+      let paymentMethod = '롯데카드';
+      if (cardName.includes('국민행복')) paymentMethod = '롯데국민행복';
+
+      result.transactions.push({
+        date: parseDate(dateRaw) || '',
+        content: '롯데카드',
+        merchant: row[merchantIdx],
+        amount: actualAmount,
+        type: 'EXPENSE',
+        orderNo: null,
+        paymentMethod,
+        businessNum: null,
+        note: cancelAmount > 0 ? `취소금액: ${cancelAmount}` : null,
+      });
+    }
+    return result;
+  }
+};
+
 export const AllParsers: BankParser[] = [
   WooriBankParser,
   HanaBankParser,
   KBCardParser,
   ShinhanCardParser,
-  HyundaiCardParser
+  HyundaiCardParser,
+  LotteCardParser
 ];
 
 export function findParser(data: any[][]): BankParser | null {

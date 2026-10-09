@@ -309,6 +309,103 @@ export async function POST(req: Request) {
           }
         }
 
+        else if (fileName.includes('롯데') || fileName.includes('lotte')) {
+          const owner = fileName.includes('동민') ? '동민' : '현주';
+          const htmlText = buffer.toString('utf-8');
+
+          if (htmlText.includes('<html') || htmlText.includes('카드이용내역')) {
+            const $ = cheerio.load(htmlText);
+            $('table').each((_, tbl) => {
+              const headers = $(tbl).find('th').map((_, el) => $(el).text().trim()).get();
+              if (headers.includes('이용가맹점') || headers.includes('이용일자')) {
+                const rows = $(tbl).find('tbody tr');
+                rows.each((_, tr) => {
+                  const tds = $(tr).find('td').map((_, el) => $(el).text().trim()).get();
+                  if (tds.length >= headers.length) {
+                    const rowObj: any = {};
+                    headers.forEach((h, idx) => rowObj[h] = tds[idx]);
+
+                    const 이용금액 = numOnly(rowObj['이용금액']);
+                    const 취소금액 = numOnly(rowObj['취소금액']);
+                    const 취소여부 = String(rowObj['취소여부'] || '').trim();
+                    const 실제지출액 = 이용금액 - 취소금액;
+
+                    if (실제지출액 === 0 && 이용금액 === 0) return;
+                    if ((취소여부 === 'Y' || 취소여부 === '취소') && (취소금액 === 이용금액 || 취소금액 === 0)) return;
+
+                    let 결제일 = String(rowObj['이용일자'] || '').trim().replace(/\./g, '-');
+                    const rawDate = 결제일.split(' ');
+                    if (rawDate.length >= 3) {
+                      결제일 = `${numOnly(rawDate[0])}-${String(numOnly(rawDate[1])).padStart(2, '0')}-${String(numOnly(rawDate[2])).padStart(2, '0')}`;
+                    }
+
+                    const 지출내용 = String(rowObj['이용가맹점'] || '').trim();
+                    const 카드명 = String(rowObj['이용카드'] || '').trim();
+
+                    let cardSub = '롯데카드';
+                    if (카드명.includes('국민행복')) cardSub = '롯데국민행복';
+
+                    const 결제수단 = `${owner}_${cardSub}`;
+                    const 비고 = 취소금액 > 0 ? `취소금액: ${취소금액}` : '';
+
+                    const cat = getCategory(지출내용);
+                    const { 소비분류, 사업자, 매출처, 주문번호 } = applyBusinessAndCoupangLogic(결제일, 지출내용, 실제지출액, cat);
+
+                    transactions.push({ 거래일: 결제일, 지출내용, 지출금액: 실제지출액, 소비분류, 매출처, 주문번호, 결제수단, 사업자, 비고 });
+                  }
+                });
+              }
+            });
+          } else {
+            const wb = xlsx.read(buffer, { type: 'buffer' });
+            for (const sheetName of wb.SheetNames) {
+              const sheet = wb.Sheets[sheetName];
+              const data: any[] = xlsx.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+              let headerIdx = -1;
+              for (let i = 0; i < Math.min(15, data.length); i++) {
+                if (data[i] && (data[i].includes('이용가맹점') || data[i].includes('이용일자'))) {
+                  headerIdx = i;
+                  break;
+                }
+              }
+              if (headerIdx !== -1) {
+                const headers = data[headerIdx].map((h: any) => String(h).trim());
+                for (let i = headerIdx + 1; i < data.length; i++) {
+                  const row = data[i];
+                  if (!row || row.length === 0) continue;
+                  const rowObj: any = {};
+                  headers.forEach((h: string, idx: number) => {
+                    if (h) rowObj[h] = row[idx];
+                  });
+
+                  const 이용금액 = numOnly(rowObj['이용금액']);
+                  const 취소금액 = numOnly(rowObj['취소금액']);
+                  const 취소여부 = String(rowObj['취소여부'] || '').trim();
+                  const 실제지출액 = 이용금액 - 취소금액;
+
+                  if (실제지출액 === 0 && 이용금액 === 0) continue;
+                  if ((취소여부 === 'Y' || 취소여부 === '취소') && (취소금액 === 이용금액 || 취소금액 === 0)) continue;
+
+                  let 결제일 = String(rowObj['이용일자'] || '').trim().replace(/\./g, '-');
+                  const 지출내용 = String(rowObj['이용가맹점'] || '').trim();
+                  const 카드명 = String(rowObj['이용카드'] || '').trim();
+
+                  let cardSub = '롯데카드';
+                  if (카드명.includes('국민행복')) cardSub = '롯데국민행복';
+
+                  const 결제수단 = `${owner}_${cardSub}`;
+                  const 비고 = 취소금액 > 0 ? `취소금액: ${취소금액}` : '';
+
+                  const cat = getCategory(지출내용);
+                  const { 소비분류, 사업자, 매출처, 주문번호 } = applyBusinessAndCoupangLogic(결제일, 지출내용, 실제지출액, cat);
+
+                  transactions.push({ 거래일: 결제일, 지출내용, 지출금액: 실제지출액, 소비분류, 매출처, 주문번호, 결제수단, 사업자, 비고 });
+                }
+              }
+            }
+          }
+        }
+
         else if (fileName.includes('우리')) {
           const owner = fileName.includes('동민') ? '동민' : '현주';
           const isMatong = fileName.includes('마통');
